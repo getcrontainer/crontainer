@@ -1,0 +1,57 @@
+{% extends 'core/base.html' %}
+{% load widget_tweaks %}
+{% block content %}
+    <form action="." method="POST">
+        {% csrf_token %}
+        <h3>
+            Create a cron<span class="text-gray-500">tainer</span>job
+        </h3>
+        {{ form.errors }}
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div>
+                {{ form.name|add_label_class:"block p-1" }}
+                {{ form.name|add_class:"rounded-md w-full border-gray-300" }}
+            </div>
+            <div>
+                {{ form.cron_rule|add_label_class:"block p-1" }}
+                {{ form.cron_rule|add_class:"rounded-md w-full border-gray-300" }}
+            </div>
+            <div>
+                {{ form.image|add_label_class:"block p-1" }}
+                {{ form.image|add_class:"rounded-md w-full border-gray-300" }}
+            </div>
+            <div>
+                {{ form.credential|add_label_class:"block p-1" }}
+                {{ form.credential|add_class:"rounded-md w-full border-gray-300" }}
+            </div>
+            <div>
+                {{ form.parameters|add_label_class:"block p-1" }}
+                {{ form.parameters|add_class:"rounded-md w-full border-gray-300" }}
+            </div>
+            <div class="flex">
+                <div class="me-2">
+                    {{ form.cpu|add_label_class:"block p-1" }}
+                    {{ form.cpu|add_class:"rounded-md w-full border-gray-300" }}
+                </div>
+                <div class="ms-2">
+                    {{ form.memory|add_label_class:"block p-1" }}
+                    {{ form.memory|add_class:"rounded-md w-full border-gray-300" }}
+                </div>
+            </div>
+            <div>
+                {{ form.active|add_class:"rounded" }} Active
+                <p class="mt-2 text-gray-600 text-sm">{{ form.active.help_text }}</p>
+            </div>
+            <div>
+                {{ form.singleton|add_class:"rounded" }} Singleton
+                <p class="mt-2 text-gray-600 text-sm">{{ form.singleton.help_text }}</p>
+            </div>
+        </div>
+        <div class="text-right">
+            <button type="submit"
+                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                Save
+            </button>
+        </div>
+    </form>
+{% endblock %}
