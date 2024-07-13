@@ -10,38 +10,79 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Credential',
+            name="Credential",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False, unique=True)),
-                ('name', models.SlugField(unique=True)),
-                ('username', models.CharField(max_length=100)),
-                ('password', models.CharField(max_length=100)),
-                ('category', models.IntegerField(choices=[(1, 'dockerhub'), (2, 'github (registry/repository/archive)'), (3, 'aws ECR (Elastic Container Registry)'), (98, 'generic git repository'), (98, 'generic registry'), (99, 'generic HTTP auth')], default=0)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("name", models.SlugField(unique=True)),
+                ("username", models.CharField(max_length=100)),
+                ("password", models.CharField(max_length=100)),
+                (
+                    "category",
+                    models.IntegerField(
+                        choices=[
+                            (1, "dockerhub"),
+                            (2, "github (registry/repository/archive)"),
+                            (3, "aws ECR (Elastic Container Registry)"),
+                            (98, "generic git repository"),
+                            (98, "generic registry"),
+                            (99, "generic HTTP auth"),
+                        ],
+                        default=0,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Schedule',
+            name="Schedule",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, primary_key=True, serialize=False, unique=True)),
-                ('name', models.SlugField(blank=True, max_length=500)),
-                ('parameters', models.CharField(blank=True, max_length=500)),
-                ('created_by', models.EmailField(max_length=254)),
-                ('created_at', models.DateTimeField(default=django.utils.timezone.now)),
-                ('cron_rule', models.CharField(blank=True, max_length=25)),
-                ('cron_rule_hash', models.CharField(blank=True, db_index=True, max_length=200)),
-                ('active', models.BooleanField(default=True)),
-                ('singleton', models.BooleanField(default=False)),
-                ('sequential_failures', models.IntegerField(default=0)),
-                ('env_vars', models.JSONField(blank=True, null=True)),
-                ('image', models.CharField(max_length=500, verbose_name='Image')),
-                ('cpu', models.IntegerField(blank=True, null=True)),
-                ('memory', models.IntegerField(blank=True, null=True)),
-                ('credential', models.ForeignKey(blank=True, help_text='If you leave blank, will assume node default registry.', null=True, on_delete=django.db.models.deletion.CASCADE, to='core.credential', verbose_name='Credentials')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("name", models.SlugField(blank=True, max_length=500)),
+                ("parameters", models.CharField(blank=True, max_length=500)),
+                ("created_by", models.EmailField(max_length=254)),
+                ("created_at", models.DateTimeField(default=django.utils.timezone.now)),
+                ("cron_rule", models.CharField(blank=True, max_length=25)),
+                (
+                    "cron_rule_hash",
+                    models.CharField(blank=True, db_index=True, max_length=200),
+                ),
+                ("active", models.BooleanField(default=True)),
+                ("singleton", models.BooleanField(default=False)),
+                ("sequential_failures", models.IntegerField(default=0)),
+                ("env_vars", models.JSONField(blank=True, null=True)),
+                ("image", models.CharField(max_length=500, verbose_name="Image")),
+                ("cpu", models.IntegerField(blank=True, null=True)),
+                ("memory", models.IntegerField(blank=True, null=True)),
+                (
+                    "credential",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="If you leave blank, will assume node default registry.",
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="core.credential",
+                        verbose_name="Credentials",
+                    ),
+                ),
             ],
         ),
     ]

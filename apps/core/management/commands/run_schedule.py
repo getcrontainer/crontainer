@@ -18,6 +18,7 @@ class Command(BaseCommand):
                 raise CommandError('Schedule "%s" does not exist' % schedule_id)
 
             import docker
+
             client = docker.from_env()
             print("Pulling image")
             image = client.images.pull(schedule.image)
@@ -30,7 +31,8 @@ class Command(BaseCommand):
                 print(container.reload())
                 print(container.status)
 
-
             self.stdout.write(
-                self.style.SUCCESS('Successfully started Schedule job "%s"' % schedule_id)
+                self.style.SUCCESS(
+                    'Successfully started Schedule job "%s"' % schedule_id
+                )
             )

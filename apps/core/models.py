@@ -45,14 +45,22 @@ class Schedule(models.Model):
     cron_rule = models.CharField(max_length=25)
     cron_rule_hash = models.CharField(max_length=200, blank=True, db_index=True)
     active = models.BooleanField(default=True, help_text="Active")
-    singleton = models.BooleanField(default=False, help_text="Selecting this option will make this schedule a singleton: only one instance will be allowed to run at any given time.")
+    singleton = models.BooleanField(
+        default=False,
+        help_text="Selecting this option will make this schedule a singleton: only one instance will be allowed to run at any given time.",
+    )
     sequential_failures = models.IntegerField(default=0)
 
     env_vars = models.JSONField(null=True, blank=True)
     image = models.CharField(max_length=500, blank=False, verbose_name="Image")
-    credential = models.ForeignKey(Credential, null=True, blank=True, on_delete=CASCADE,
-                                   help_text="If you leave blank, will assume node default registry.",
-                                   verbose_name="Credentials")
+    credential = models.ForeignKey(
+        Credential,
+        null=True,
+        blank=True,
+        on_delete=CASCADE,
+        help_text="If you leave blank, will assume node default registry.",
+        verbose_name="Credentials",
+    )
 
     cpu = models.IntegerField(null=True, blank=True)
     memory = models.IntegerField(null=True, blank=True)

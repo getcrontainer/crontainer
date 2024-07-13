@@ -6,23 +6,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0001_initial'),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='schedule',
-            name='active',
-            field=models.BooleanField(default=True, help_text='Active'),
+            model_name="schedule",
+            name="active",
+            field=models.BooleanField(default=True, help_text="Active"),
         ),
         migrations.AlterField(
-            model_name='schedule',
-            name='cron_rule',
+            model_name="schedule",
+            name="cron_rule",
             field=models.CharField(max_length=25),
         ),
         migrations.AlterField(
-            model_name='schedule',
-            name='singleton',
-            field=models.BooleanField(default=False, help_text='Selecting this option will make this schedule a singleton: only one instance will be allowed to run at any given time.'),
+            model_name="schedule",
+            name="singleton",
+            field=models.BooleanField(
+                default=False,
+                help_text="Selecting this option will make this schedule a singleton: only one instance will be allowed to run at any given time.",
+            ),
         ),
     ]

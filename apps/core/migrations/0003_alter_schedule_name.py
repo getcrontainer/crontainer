@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0002_alter_schedule_active_alter_schedule_cron_rule_and_more'),
+        ("core", "0002_alter_schedule_active_alter_schedule_cron_rule_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='schedule',
-            name='name',
+            model_name="schedule",
+            name="name",
             field=models.SlugField(max_length=500),
         ),
     ]
