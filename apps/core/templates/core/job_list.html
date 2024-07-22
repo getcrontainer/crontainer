@@ -29,16 +29,17 @@
                             <label for="checkbox-all-search" class="sr-only">checkbox</label>
                         </div>
                     </th>
-                    <th scope="col" class="px-6 py-3">Name</th>
-                    <th scope="col" class="px-6 py-3">Cron Rule</th>
-                    <th scope="col" class="px-6 py-3">Source</th>
-                    <th scope="col" class="px-6 py-3">CPU</th>
-                    <th scope="col" class="px-6 py-3">Memory</th>
+                    <th scope="col" class="px-6 py-3">Id</th>
+                    <th scope="col" class="px-6 py-3">Status</th>
+                    <th scope="col" class="px-6 py-3">Schedule</th>
+                    <th scope="col" class="px-6 py-3">Cron rule</th>
+                    <th scope="col" class="px-6 py-3">Started at</th>
+                    <th scope="col" class="px-6 py-3">Duration</th>
                     <th scope="col" class="px-6 py-3">Action</th>
                 </tr>
             </thead>
             <tbody>
-                {% for schedule in object_list %}
+                {% for job in object_list %}
                     <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                         <td class="w-4 p-4">
                             <div class="flex items-center">
@@ -49,24 +50,25 @@
                             </div>
                         </td>
                         <th scope="row"
-                            class="flex items-center px-6 py-4 text-gray-900 whitespace-nowrap dark:text-white">
+                            class="flex items-center px-6 py-4 text-gray-700 whitespace-nowrap dark:text-white">
                             <div class="ps-3">
-                                <div class="text-base font-semibold">{{ schedule.name }}</div>
-                                <div class="font-normal text-gray-500">{{ schedule.id }}</div>
+                                <div class="text-base font-semibold">{{ job.id }}</div>
                             </div>
                         </th>
-                        <td class="px-6 py-4">{{ schedule.cron_rule }}</td>
+                        <td class="px-6 py-4">{{ job.status }} ( {{ job.status_code }} )</td>
+                        <td class="px-6 py-4">{{ job.schedule.name }}</td>
+                        <td class="px-6 py-4">{{ job.schedule.cron_rule }}</td>
+                        <td class="px-6 py-4">{{ job.created_at }} MB</td>
+                        <td class="px-6 py-4">{{ job.duration }}s</td>
                         <td class="px-6 py-4">
-                            <div class="flex items-center">
-                                <div class="h-2.5 w-2.5 rounded-full bg-green-500 me-2"></div>
-                                {{ schedule.image }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4">{{ schedule.cpu }} core</td>
-                        <td class="px-6 py-4">{{ schedule.memory }} MB</td>
-                        <td class="px-6 py-4">
-                            <a href="{% url 'schedule-delete' schedule.id %}"
+                            <a href="{% url 'schedule-delete' job.id %}"
                                class="font-medium text-blue-600 dark:text-blue-500 hover:underline">delete</a>
+                            {% if job.log %}
+                                <a href="{% url 'job-log' job.id %}"
+                                   class="font-medium text-blue-600 dark:text-blue-500 hover:underline">log</a>
+                            {% else %}
+                                <span class="text-gray-500">log</span>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}

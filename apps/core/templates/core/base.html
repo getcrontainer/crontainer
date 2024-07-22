@@ -10,10 +10,9 @@
             <div class="max-w-none format border-2 border-gray-200 flex-1 rounded-xl dark:border-gray-600 p-5 bg-gray-100 bg-opacity-20 h-[calc(100vh-40px)]">
                 <div class="float-right">
                     <a href="/">Schedules</a> |
-                    <a href="/history/">History</a> |
-                    <a href="/node/">Nodes</a> |
+                    <a href="{% url 'job-list' %}">Jobs</a> |
                     <a href="/credential/">Credentials</a> |
-                    <a href="/member/">Members</a>
+                    <a href="/credential/">Docs</a>
                 </div>
                 <h1>CRONTAINER</h1>
                 {% block content %}{% endblock %}

@@ -1,5 +1,6 @@
 import uuid
 
+import dateutil
 from django.db import models
 from django.db.models import CASCADE
 from django.utils import timezone
@@ -64,3 +65,29 @@ class Schedule(models.Model):
 
     cpu = models.IntegerField(null=True, blank=True)
     memory = models.IntegerField(null=True, blank=True)
+
+
+class Job(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True)
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
+    state = models.JSONField(null=True)
+    status = models.CharField(max_length=20, default="waiting")
+    created_at = models.DateTimeField(default=timezone.now)
+    log = models.TextField(blank=True)
+    status_code = models.IntegerField(null=True)
+
+    exception_on_build = models.BooleanField(default=False)
+    exception_on_pull = models.BooleanField(default=False)
+    exception_on_run = models.BooleanField(default=False)
+
+    def duration(self):
+        if self.status != "exited":
+            return "n/a"
+        try:
+            start = dateutil.parser.parse(self.state["StartedAt"])
+            end = dateutil.parser.parse(self.state["FinishedAt"])
+            if end.year == 1:
+                end = timezone.now()
+            return (end - start).seconds
+        except TypeError:
+            return "n/a"

@@ -1,7 +1,7 @@
 import os
 from django.conf import settings
-from django.views.generic import CreateView, ListView, DeleteView
-from apps.core.models import Schedule
+from django.views.generic import CreateView, ListView, DeleteView, DetailView
+from apps.core.models import Schedule, Job
 
 
 class ScheduleListView(ListView):
@@ -40,3 +40,19 @@ class ScheduleCreateView(CreateView):
 class ScheduleDeleteView(DeleteView):
     model = Schedule
     success_url = "/"
+
+    def form_valid(self, form):
+        file_path = os.path.join(settings.BASE_DIR, "cron.d", f"ct_{self.object.id}")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        return super().form_valid(form)
+
+
+class JobListView(ListView):
+    model = Job
+    success_url = "/"
+
+
+class JobLogDetailView(DetailView):
+    model = Job
+    template_name = "core/job_log.html"
