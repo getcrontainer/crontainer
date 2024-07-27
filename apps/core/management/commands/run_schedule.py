@@ -28,8 +28,10 @@ class Command(BaseCommand):
 
             self.job = Job.objects.create(schedule_id=schedule_id)
 
-            self.build_image()
-            self.pull_image()
+            if self.schedule.image.lower().startswith(("http://", "https://")):
+                self.build_image()
+            else:
+                self.pull_image()
             self.start_container()
 
             self.stdout.write(
@@ -39,9 +41,6 @@ class Command(BaseCommand):
             )
 
     def build_image(self):
-        if self.schedule.image.startswith("http://") or self.schedule.image.startswith(
-            "https://"
-        ):
             x = client.images.build(
                 path=self.schedule.image + "#main", tag="abacate:latest"
             )
@@ -50,10 +49,6 @@ class Command(BaseCommand):
             self.local_image = "abacate:latest"
 
     def pull_image(self):
-        if self.schedule.image.startswith("http://") or self.schedule.image.startswith(
-            "https://"
-        ):
-            return
         print("Pulling image")
         start_time = time.time()
         image = client.api.pull(self.schedule.image)
@@ -61,8 +56,7 @@ class Command(BaseCommand):
         print(time.time() - start_time)
 
     def start_container(self):
-        image = self.schedule.image if self.local_image is None else self.local_image
-        print(image)
+        image = self.local_image or self.schedule.image
         try:
             client.containers.run(image, "sleep 15", detach=True, name=self.job.id)
         except docker.errors.APIError as e:
