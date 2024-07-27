@@ -1,7 +1,8 @@
 import os
 from django.conf import settings
+from django.urls import reverse_lazy
 from django.views.generic import CreateView, ListView, DeleteView, DetailView
-from apps.core.models import Schedule, Job
+from apps.core.models import Schedule, Job, Credential
 
 
 class ScheduleListView(ListView):
@@ -56,3 +57,14 @@ class JobListView(ListView):
 class JobLogDetailView(DetailView):
     model = Job
     template_name = "core/job_log.html"
+
+
+class CredentialListView(ListView):
+    model = Credential
+
+
+class CredentialCreateView(CreateView):
+    model = Credential
+    success_url = reverse_lazy("credential-list")
+    fields = ["name", "username", "password", "category"]
+

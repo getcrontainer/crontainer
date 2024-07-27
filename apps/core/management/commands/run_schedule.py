@@ -41,12 +41,12 @@ class Command(BaseCommand):
             )
 
     def build_image(self):
-            x = client.images.build(
-                path=self.schedule.image + "#main", tag="abacate:latest"
-            )
-            for i in x[1]:
-                print(i)
-            self.local_image = "abacate:latest"
+        x = client.images.build(
+            path=self.schedule.image + "#main", tag="abacate:latest"
+        )
+        for i in x[1]:
+            print(i)
+        self.local_image = "abacate:latest"
 
     def pull_image(self):
         print("Pulling image")
