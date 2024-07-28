@@ -13,10 +13,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         client = docker.from_env()
         for job in (
-            Job.objects.filter(status_code__isnull=True)
-            .exclude(exception_on_run=True)
-            .exclude(exception_on_pull=True)
-            .exclude(exception_on_run=True)
+            Job.objects.filter(status_code__isnull=True, provisioning=False)
         ):
             print(f"processing job {job.id} for schedule {job.schedule.name}")
             container_name = str(job.id)
@@ -42,29 +39,3 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS('Successfully started Schedule job "%s"' % job.id)
             )
-
-        for job in Job.objects.filter(status_code__isnull=True).filter(
-            Q(exception_on_run=True)
-            | Q(exception_on_pull=True)
-            | Q(exception_on_run=True)
-        ):
-            print(f"Processing failed job {job.id} for schedule {job.schedule.name}")
-            container_name = str(job.id)
-
-            if job.exception_on_pull:
-                job.status_code = -100
-                job.save()
-
-            if job.exception_on_build:
-                job.status_code = -200
-                job.save()
-
-            if job.exception_on_run:
-                job.status_code = -300
-                job.save()
-
-            try:
-                container = client.containers.get(container_name)
-                container.remove()
-            except docker.errors.NotFound:
-                print("Can´t find a container to container", container_name)

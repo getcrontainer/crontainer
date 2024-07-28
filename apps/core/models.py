@@ -75,6 +75,7 @@ class Job(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     log = models.TextField(blank=True)
     status_code = models.IntegerField(null=True)
+    provisioning = models.BooleanField(default=True)
 
     exception_on_build = models.BooleanField(default=False)
     exception_on_pull = models.BooleanField(default=False)
