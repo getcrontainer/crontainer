@@ -85,8 +85,9 @@ class Command(BaseCommand):
 
     def start_container(self):
         image = self.local_image or self.schedule.image
+        cmd = self.schedule.cmd or None
         try:
-            client.containers.run(image, "abacate", detach=True, name=self.job.id)
+            client.containers.run(image, cmd, detach=True, name=self.job.id)
             self.job.provisioning = False
             self.job.save()
         except docker.errors.APIError as e:

@@ -2,6 +2,8 @@ import os
 from django.conf import settings
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, ListView, DeleteView, DetailView
+
+from apps.core.forms import ScheduleCreateForm
 from apps.core.models import Schedule, Job, Credential
 
 
@@ -12,18 +14,7 @@ class ScheduleListView(ListView):
 
 class ScheduleCreateView(CreateView):
     model = Schedule
-    fields = [
-        "name",
-        "parameters",
-        "cron_rule",
-        "active",
-        "singleton",
-        "env_vars",
-        "image",
-        "credential",
-        "cpu",
-        "memory",
-    ]
+    form_class = ScheduleCreateForm
     success_url = "/"
 
     def form_valid(self, form):

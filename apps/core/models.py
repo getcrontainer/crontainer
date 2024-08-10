@@ -40,6 +40,7 @@ class Credential(models.Model):
 class Schedule(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True)
     name = models.SlugField(max_length=500)
+    cmd = models.CharField(blank=True, max_length=500, help_text="Command to execute")
     parameters = models.CharField(blank=True, max_length=500)
     created_by = models.EmailField()
     created_at = models.DateTimeField(default=timezone.now)

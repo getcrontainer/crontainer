@@ -1,7 +1,7 @@
 - model: core.schedule
   pk: 9df837f7-82e8-4c34-ab10-0438206fe95a
   fields:
-    name: example-failed-build-from-github
+    name: "[build-error-test] :: invalid branch"
     parameters: ''
     created_by: ''
     created_at: 2024-07-20 15:53:00.973476+00:00
@@ -11,7 +11,7 @@
     singleton: false
     sequential_failures: 0
     env_vars: null
-    image: https://github.com/voorloopnul/caddydebug.git#fake
+    image: https://github.com/getcrontainer/test-jobs.git#non-existent-branch
     credential: null
     cpu: 1
     memory: 100
@@ -19,7 +19,7 @@
 - model: core.schedule
   pk: cc51a3ee-54bf-4dd4-a3f9-62e8be9d86c1
   fields:
-    name: example-non-existent-dockerhub-image
+    name: "[pull-error-test] :: non existent repository"
     parameters: ''
     created_by: ''
     created_at: 2024-07-28 16:12:52.346991+00:00
@@ -29,7 +29,7 @@
     singleton: false
     sequential_failures: 0
     env_vars: null
-    image: this-dockerhub-repository-should-not-exist:latest
+    image: this-dockerhub-repository-should-not-exist:hopefully
     credential: null
     cpu: null
     memory: null
@@ -37,7 +37,7 @@
 - model: core.schedule
   pk: fa24163d-4fc8-4ee6-8626-1017a61e3f9b
   fields:
-    name: example-existent-dockerhub-image
+    name: "[run-success-test] :: public ghcr"
     parameters: ''
     created_by: ''
     created_at: 2024-07-20 13:23:09.635220+00:00
@@ -47,7 +47,25 @@
     singleton: false
     sequential_failures: 0
     env_vars: null
-    image: ubuntu:latest
+    image: ghcr.io/getcrontainer/test-jobs:latest
+    credential: null
+    cpu: 1
+    memory: 500
+
+- model: core.schedule
+  pk: f3eb38f9-b187-4dd3-9446-d547813cb063
+  fields:
+    name: "[run-error-test] :: command don´t exist in image"
+    parameters: '/usr/bin/non-existent-binary'
+    created_by: ''
+    created_at: 2024-07-20 13:23:09.635220+00:00
+    cron_rule: '* * * * *'
+    cron_rule_hash: ''
+    active: true
+    singleton: false
+    sequential_failures: 0
+    env_vars: null
+    image: ghcr.io/getcrontainer/test-jobs:latest
     credential: null
     cpu: 1
     memory: 500

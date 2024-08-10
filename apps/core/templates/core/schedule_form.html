@@ -6,15 +6,17 @@
         <h3>
             Create a cron<span class="text-gray-500">tainer</span>job
         </h3>
-        {{ form.errors }}
+        {{ form.non_field_errors }}
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             <div>
                 {{ form.name|add_label_class:"block p-1" }}
-                {{ form.name|add_class:"rounded-md w-full border-gray-300" }}
+                {{ form.name|add_class:"rounded-md w-full border-gray-300"|add_error_class:"text-red-400" }}
+                <span class="text-red-500 text-sm">{{ form.name.errors }}</span>
             </div>
             <div>
                 {{ form.cron_rule|add_label_class:"block p-1" }}
-                {{ form.cron_rule|add_class:"rounded-md w-full border-gray-300" }}
+                {{ form.cron_rule|add_class:"rounded-md w-full border-gray-300"|add_error_class:"text-red-400" }}
+                <span class="text-red-500 text-sm">{{ form.cron_rule.errors }}</span>
             </div>
             <div>
                 {{ form.image|add_label_class:"block p-1" }}
@@ -25,8 +27,8 @@
                 {{ form.credential|add_class:"rounded-md w-full border-gray-300" }}
             </div>
             <div>
-                {{ form.parameters|add_label_class:"block p-1" }}
-                {{ form.parameters|add_class:"rounded-md w-full border-gray-300" }}
+                {{ form.cmd|add_label_class:"block p-1" }}
+                {{ form.cmd|add_class:"rounded-md w-full border-gray-300" }}
             </div>
             <div class="flex">
                 <div class="me-2">
