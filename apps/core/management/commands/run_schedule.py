@@ -66,8 +66,11 @@ class Command(BaseCommand):
     def pull_image(self):
         start_time = time.time()
         print("Pulling image")
+        credential = self.schedule.credential
+        credential = credential.json() if credential else None
         try:
-            client.api.pull(self.schedule.image)
+            client.images.pull(self.schedule.image, auth_config=credential)
+            # client.api.pull(self.schedule.image, auth_config=credential)
         except Exception as e:
             self.job.exception_on_pull = True
             self.job.log = e
