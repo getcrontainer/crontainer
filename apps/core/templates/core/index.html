@@ -59,11 +59,10 @@
                         <td class="px-6 py-4">{{ schedule.cron_rule }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center">
-                                <i class="fas me-4 {% if schedule.credential %} fa-lock {% else %} fa-unlock text-gray-300{% endif %}"></i> 
+                                <i class="fas me-4 {% if schedule.credential %} fa-lock {% else %} fa-unlock text-gray-300{% endif %}"></i>
                                 <i class="{{ schedule.get_source_icon }} me-3"></i>
                                 {{ schedule.image }}
                             </div>
-
                         </td>
                         <td class="px-6 py-4 text-center">
                             {% if schedule.cpu %}
