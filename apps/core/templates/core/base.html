@@ -1,15 +1,17 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
         <link href="{% static 'output.css' %}" rel="stylesheet">
+        <script src="https://kit.fontawesome.com/dfbb00813a.js"
+                crossorigin="anonymous"></script>
     </head>
     <body class="bg-white p-5">
         <div class="antialiased bg-white dark:bg-gray-900 2xl:container mx-auto">
             <div class="max-w-none format border-2 border-gray-200 flex-1 rounded-xl dark:border-gray-600 p-5 bg-gray-100 bg-opacity-20 h-[calc(100vh-40px)]">
                 <div class="float-right">
-                    <a href="/">Schedules</a> |
+                    <a href="{% url 'schedule-list' %}">Schedules</a> |
                     <a href="{% url 'job-list' %}">Jobs</a> |
                     <a href="{% url 'credential-list' %}">Credentials</a> |
                     <a href="/credential/">Docs</a>

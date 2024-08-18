@@ -50,6 +50,7 @@
                         </td>
                         <th scope="row"
                             class="flex items-center px-6 py-4 text-gray-900 whitespace-nowrap dark:text-white">
+                            <div class="h-2.5 w-2.5 rounded-full bg-green-500 me-2"></div>
                             <div class="ps-3">
                                 <div class="text-base font-semibold">{{ schedule.name }}</div>
                                 <div class="font-normal text-gray-500">{{ schedule.id }}</div>
@@ -58,15 +59,31 @@
                         <td class="px-6 py-4">{{ schedule.cron_rule }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center">
-                                <div class="h-2.5 w-2.5 rounded-full bg-green-500 me-2"></div>
+                                <i class="fas me-4 {% if schedule.credential %} fa-lock {% else %} fa-unlock text-gray-300{% endif %}"></i> 
+                                <i class="{{ schedule.get_source_icon }} me-3"></i>
                                 {{ schedule.image }}
                             </div>
+
                         </td>
-                        <td class="px-6 py-4">{{ schedule.cpu }} core</td>
-                        <td class="px-6 py-4">{{ schedule.memory }} MB</td>
+                        <td class="px-6 py-4 text-center">
+                            {% if schedule.cpu %}
+                                {{ schedule.cpu }}
+                            {% else %}
+                                <i class="fas fa-infinity"></i>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if schedule.memory %}
+                                {{ schedule.memory }} MB
+                            </td>
+                        {% else %}
+                            <i class="fas fa-infinity"></i>
+                        {% endif %}
                         <td class="px-6 py-4">
                             <a href="{% url 'schedule-delete' schedule.id %}"
-                               class="font-medium text-blue-600 dark:text-blue-500 hover:underline">delete</a>
+                               class="font-medium text-blue-600 dark:text-blue-500 hover:underline"><i class="fas fa-solid fa-trash fa-fw"></i></a>
+                            <a href="{% url 'schedule-update' schedule.id %}"
+                               class="ms-2 font-medium text-blue-600 dark:text-blue-500 hover:underline"><i class="fas fa-edit fw-fw"></i></a>
                         </td>
                     </tr>
                 {% endfor %}

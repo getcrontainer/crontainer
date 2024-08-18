@@ -25,13 +25,14 @@ from apps.core.views import (
     ScheduleListView,
     ScheduleDeleteView,
     JobListView,
-    JobLogDetailView, CredentialListView, CredentialCreateView,
+    JobLogDetailView, CredentialListView, CredentialCreateView, ScheduleUpdateView,
 )
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", ScheduleListView.as_view()),
+    path("", ScheduleListView.as_view(), name="schedule-list"),
     path("create/", ScheduleCreateView.as_view()),
+    path("update/<uuid:pk>/", ScheduleUpdateView.as_view(), name="schedule-update"),
     path("delete/<uuid:pk>/", ScheduleDeleteView.as_view(), name="schedule-delete"),
     path("job/", JobListView.as_view(), name="job-list"),
     path("job/log/<uuid:pk>/", JobLogDetailView.as_view(), name="job-log"),

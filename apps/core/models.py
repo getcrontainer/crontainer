@@ -67,6 +67,11 @@ class Schedule(models.Model):
     cpu = models.IntegerField(null=True, blank=True)
     memory = models.IntegerField(null=True, blank=True)
 
+    def get_source_icon(self):
+        if self.image.startswith("https://github.com"):
+            return "fas fa-code-branch fa-1x fa-fw"
+        return "fab fa-docker fa-1x fa-fw"
+
 
 class Job(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True)

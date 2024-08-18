@@ -1,9 +1,9 @@
 import os
 from django.conf import settings
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, ListView, DeleteView, DetailView
+from django.views.generic import CreateView, ListView, DeleteView, DetailView, UpdateView
 
-from apps.core.forms import ScheduleCreateForm
+from apps.core.forms import ScheduleCreateForm, ScheduleUpdateForm
 from apps.core.models import Schedule, Job, Credential
 
 
@@ -27,6 +27,12 @@ class ScheduleCreateView(CreateView):
         with open(crontab_path, "w") as fh:
             fh.write(cmd)
         return response
+
+
+class ScheduleUpdateView(UpdateView):
+    model = Schedule
+    form_class = ScheduleUpdateForm
+    success_url = "/"
 
 
 class ScheduleDeleteView(DeleteView):
