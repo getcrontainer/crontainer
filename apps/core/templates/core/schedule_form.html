@@ -7,7 +7,7 @@
             Create a cron<span class="text-gray-500">tainer</span>job
         </h3>
         {{ form.non_field_errors }}
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="max-w-2xl">
             <div>
                 {{ form.name|add_label_class:"block p-1" }}
                 {{ form.name|add_class:"rounded-md w-full border-gray-300"|add_error_class:"text-red-400" }}
