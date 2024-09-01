@@ -1,7 +1,13 @@
 import os
 from django.conf import settings
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, ListView, DeleteView, DetailView, UpdateView
+from django.views.generic import (
+    CreateView,
+    ListView,
+    DeleteView,
+    DetailView,
+    UpdateView,
+)
 
 from apps.core.forms import ScheduleCreateForm, ScheduleUpdateForm
 from apps.core.models import Schedule, Job, Credential
@@ -64,4 +70,3 @@ class CredentialCreateView(CreateView):
     model = Credential
     success_url = reverse_lazy("credential-list")
     fields = ["name", "username", "password", "category"]
-

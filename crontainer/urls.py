@@ -25,7 +25,10 @@ from apps.core.views import (
     ScheduleListView,
     ScheduleDeleteView,
     JobListView,
-    JobLogDetailView, CredentialListView, CredentialCreateView, ScheduleUpdateView,
+    JobLogDetailView,
+    CredentialListView,
+    CredentialCreateView,
+    ScheduleUpdateView,
 )
 
 urlpatterns = [
@@ -37,5 +40,7 @@ urlpatterns = [
     path("job/", JobListView.as_view(), name="job-list"),
     path("job/log/<uuid:pk>/", JobLogDetailView.as_view(), name="job-log"),
     path("credentials/", CredentialListView.as_view(), name="credential-list"),
-    path("credentials/create/", CredentialCreateView.as_view(), name="credential-create"),
+    path(
+        "credentials/create/", CredentialCreateView.as_view(), name="credential-create"
+    ),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

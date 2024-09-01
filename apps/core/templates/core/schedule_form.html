@@ -1,10 +1,10 @@
-{% extends 'core/base.html' %}
+{% extends 'core/base2.html' %}
 {% load widget_tweaks %}
 {% block content %}
     <form action="." method="POST">
         {% csrf_token %}
         <h3>
-            Create a cron<span class="text-gray-500">tainer</span>job
+         Schedules</span> :: Create
         </h3>
         {{ form.non_field_errors }}
         <div class="max-w-2xl">

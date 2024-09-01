@@ -12,9 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         client = docker.from_env()
-        for job in (
-            Job.objects.filter(status_code__isnull=True, provisioning=False)
-        ):
+        for job in Job.objects.filter(status_code__isnull=True, provisioning=False):
             print(f"processing job {job.id} for schedule {job.schedule.name}")
             container_name = str(job.id)
 

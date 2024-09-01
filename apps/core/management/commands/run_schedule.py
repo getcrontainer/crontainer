@@ -36,9 +36,7 @@ class Command(BaseCommand):
         self.start_container()
 
         self.stdout.write(
-            self.style.SUCCESS(
-                'Successfully started Schedule job "%s"' % schedule_id
-            )
+            self.style.SUCCESS('Successfully started Schedule job "%s"' % schedule_id)
         )
 
     def build_image(self):
