@@ -18,7 +18,7 @@ category_choices = (
 class Credential(models.Model):
 
     id = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True)
-    name = models.SlugField(max_length=50, unique=True)
+    name = models.SlugField(max_length=50, unique=True, verbose_name="Label", help_text="Name of your credential")
     username = models.CharField(max_length=100)
     password = models.CharField(max_length=100)
     category = models.IntegerField(choices=category_choices, default=0)
