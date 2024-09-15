@@ -6,10 +6,10 @@ from django.db.models import CASCADE
 from django.utils import timezone
 
 category_choices = (
-    (1, "Dockerhub Token"),
-    (2, "Github Private Access Token"),
-    (3, "aws ECR (Elastic Container Registry)"),
-    (98, "generic git repository"),
+    (1, "Dockerhub"),
+    (2, "Github PAT"),
+    (3, "AWS ECR"),
+    (98, "generic git"),
     (98, "generic registry"),
     (99, "generic HTTP auth"),
 )

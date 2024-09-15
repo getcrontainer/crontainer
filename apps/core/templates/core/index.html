@@ -82,9 +82,9 @@
                         {% endif %}
                         <td class="px-6 py-4">
                             <a href="{% url 'schedule-delete' schedule.id %}"
-                               class="font-medium text-blue-600 dark:text-blue-500 hover:underline"><i class="fas fa-solid fa-trash fa-fw"></i></a>
+                               class="font-medium text-blue-600 dark:text-blue-500 hover:underline"><span class="mdi mdi-trash-can-outline mdi-18px"></span></a>
                             <a href="{% url 'schedule-update' schedule.id %}"
-                               class="ms-2 font-medium text-blue-600 dark:text-blue-500 hover:underline"><i class="fas fa-edit fw-fw"></i></a>
+                               class="ms-2 font-medium text-blue-600 dark:text-blue-500 hover:underline"><span class="mdi mdi-pencil mdi-18px"></span></a>
                         </td>
                     </tr>
                 {% endfor %}
