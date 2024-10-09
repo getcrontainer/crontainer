@@ -2,7 +2,7 @@ import uuid
 
 import dateutil
 from django.db import models
-from django.db.models import CASCADE
+from django.db.models import CASCADE, PROTECT
 from django.utils import timezone
 
 category_choices = (
@@ -18,10 +18,15 @@ category_choices = (
 class Credential(models.Model):
 
     id = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True)
-    name = models.SlugField(max_length=50, unique=True, verbose_name="Label", help_text="Name of your credential")
-    username = models.CharField(max_length=100)
+    name = models.SlugField(
+        max_length=50,
+        unique=True,
+        verbose_name="Label",
+        help_text="Name of your credential",
+    )
+    username = models.CharField(max_length=100, blank=True)
     password = models.CharField(max_length=100)
-    category = models.IntegerField(choices=category_choices, default=0)
+    category = models.IntegerField(choices=category_choices, default=1, blank=True)
 
     def __str__(self):
         return self.name
@@ -59,7 +64,7 @@ class Schedule(models.Model):
         Credential,
         null=True,
         blank=True,
-        on_delete=CASCADE,
+        on_delete=PROTECT,
         help_text="If you leave blank, will assume node default registry.",
         verbose_name="Credentials",
     )

@@ -66,7 +66,7 @@
     sequential_failures: 0
     env_vars: null
     image: ghcr.io/getcrontainer/test-jobs:latest
-    credential: "2312eaae-7ef9-40a7-b92f-2c15a843f1a0"
+    credential: "8049305b-a889-4e74-be20-6c65b8761f27"
     cpu: 1
     memory: 500
 

@@ -70,3 +70,8 @@ class CredentialCreateView(CreateView):
     model = Credential
     success_url = reverse_lazy("credential-list")
     fields = ["name", "username", "password", "category"]
+
+
+class CredentialDeleteView(DeleteView):
+    model = Credential
+    success_url = reverse_lazy("credential-list")

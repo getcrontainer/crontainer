@@ -29,6 +29,7 @@ from apps.core.views import (
     CredentialListView,
     CredentialCreateView,
     ScheduleUpdateView,
+    CredentialDeleteView,
 )
 
 urlpatterns = [
@@ -42,5 +43,10 @@ urlpatterns = [
     path("credentials/", CredentialListView.as_view(), name="credential-list"),
     path(
         "credentials/create/", CredentialCreateView.as_view(), name="credential-create"
+    ),
+    path(
+        "credentials/delete/<uuid:pk>/",
+        CredentialDeleteView.as_view(),
+        name="credential-delete",
     ),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
