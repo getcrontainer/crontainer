@@ -17,4 +17,3 @@ jobs:
       - name: Run quality checking
         run: |
           ./.hooks/pre-push
-          ls

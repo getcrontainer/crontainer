@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -e
+
+echo "Running pre push hook!"
+repository_path=$(git rev-parse --show-toplevel)
+
+echo "Running black.."
+black --check --diff "$repository_path"
+
+echo "Running djlint"
+djlint --check "$repository_path"/apps
+exit 0
