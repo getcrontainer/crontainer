@@ -36,15 +36,11 @@ class Command(BaseCommand):
             self.pull_image()
         self.start_container()
 
-        self.stdout.write(
-            self.style.SUCCESS('Successfully started Schedule job "%s"' % schedule_id)
-        )
+        self.stdout.write(self.style.SUCCESS('Successfully started Schedule job "%s"' % schedule_id))
 
     def build_image(self):
         try:
-            x = client.images.build(
-                path=self.schedule.image + "#main", tag="abacate:latest"
-            )
+            x = client.images.build(path=self.schedule.image + "#main", tag="abacate:latest")
             for i in x[1]:
                 print(i)
             self.local_image = "abacate:latest"
@@ -55,11 +51,7 @@ class Command(BaseCommand):
             self.job.status = "failure"
             self.job.status_code = -100
             self.job.save()
-            self.stdout.write(
-                self.style.ERROR(
-                    f"Failed to [build image] for Schedule job {self.schedule.id}"
-                )
-            )
+            self.stdout.write(self.style.ERROR(f"Failed to [build image] for Schedule job {self.schedule.id}"))
             sys.exit(0)
 
     def pull_image(self):
@@ -76,11 +68,7 @@ class Command(BaseCommand):
             self.job.status = "failure"
             self.job.status_code = -200
             self.job.save()
-            self.stdout.write(
-                self.style.ERROR(
-                    f"Failed to [pull image] for Schedule job {self.schedule.id}"
-                )
-            )
+            self.stdout.write(self.style.ERROR(f"Failed to [pull image] for Schedule job {self.schedule.id}"))
             sys.exit(0)
 
         print(time.time() - start_time)
@@ -98,9 +86,5 @@ class Command(BaseCommand):
             self.job.status = "failure"
             self.job.status_code = -300
             self.job.save()
-            self.stdout.write(
-                self.style.ERROR(
-                    f"Failed to [run container] for Schedule job {self.schedule.id}"
-                )
-            )
+            self.stdout.write(self.style.ERROR(f"Failed to [run container] for Schedule job {self.schedule.id}"))
             sys.exit(0)

@@ -6,7 +6,10 @@ echo "Running pre push hook!"
 repository_path=$(git rev-parse --show-toplevel)
 
 echo "Running black.."
-black --check --diff "$repository_path"
+black "$repository_path"/apps
+
+echo "Running isort.."
+isort "$repository_path"/apps
 
 echo "Running djlint"
 djlint --check "$repository_path"/apps

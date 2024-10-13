@@ -34,6 +34,4 @@ class Command(BaseCommand):
                     job.save()
                     container.remove()
 
-            self.stdout.write(
-                self.style.SUCCESS('Successfully started Schedule job "%s"' % job.id)
-            )
+            self.stdout.write(self.style.SUCCESS('Successfully started Schedule job "%s"' % job.id))
