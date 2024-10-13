@@ -1,7 +1,8 @@
 import cron_descriptor
+from cron_descriptor import ExpressionDescriptor, get_description
 from django import forms
 from django.core.exceptions import ValidationError
-from cron_descriptor import get_description, ExpressionDescriptor
+
 from apps.core.models import Schedule
 
 

@@ -1,9 +1,10 @@
 import sys
 import time
-import docker
 
+import docker
 from django.core.management.base import BaseCommand, CommandError
-from apps.core.models import Schedule, Job
+
+from apps.core.models import Job, Schedule
 
 client = docker.from_env()
 

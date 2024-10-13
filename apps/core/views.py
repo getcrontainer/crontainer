@@ -1,16 +1,17 @@
 import os
+
 from django.conf import settings
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
-    ListView,
     DeleteView,
     DetailView,
+    ListView,
     UpdateView,
 )
 
 from apps.core.forms import ScheduleCreateForm, ScheduleUpdateForm
-from apps.core.models import Schedule, Job, Credential
+from apps.core.models import Credential, Job, Schedule
 
 
 class ScheduleListView(ListView):
