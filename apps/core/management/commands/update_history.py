@@ -1,10 +1,7 @@
-import time
-
 import docker
-from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
+from django.core.management.base import BaseCommand
 
-from apps.core.models import Job, Schedule
+from apps.core.models import Job
 
 
 class Command(BaseCommand):

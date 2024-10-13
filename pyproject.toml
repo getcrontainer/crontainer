@@ -10,3 +10,16 @@ exclude = '''
 profile = "black"
 skip = "migrations"
 filter_files = true
+
+[tool.pylint]
+ignore=["migrations", "manage.py"]
+disable = [
+    "no-member", # Some members are created in runtime, pylint fails to detect such cases
+    "line-too-long", # We already have this in black.
+    "broad-exception-caught",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "too-many-ancestors", # django can't cope well with this one
+    "too-few-public-methods" # django can't cope well with this one
+]

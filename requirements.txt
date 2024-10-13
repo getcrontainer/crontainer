@@ -5,3 +5,4 @@ whitenoise==6.7.0
 docker==7.1.0
 black==24.4.2
 isort==5.13.2
+pylint==3.3.1

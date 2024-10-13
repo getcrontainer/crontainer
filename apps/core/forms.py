@@ -1,5 +1,5 @@
 import cron_descriptor
-from cron_descriptor import ExpressionDescriptor, get_description
+from cron_descriptor import get_description
 from django import forms
 from django.core.exceptions import ValidationError
 
@@ -28,8 +28,8 @@ class ScheduleCreateForm(forms.ModelForm):
             raise ValidationError("Cronjob expression is composed of 5 elements")
         try:
             get_description(data)
-        except cron_descriptor.Exception.FormatException:
-            raise ValidationError("Not a valid cronjob expression")
+        except cron_descriptor.Exception.FormatException as err:
+            raise ValidationError("Not a valid cronjob expression") from err
 
         return data
 
@@ -55,7 +55,7 @@ class ScheduleUpdateForm(forms.ModelForm):
             raise ValidationError("Cronjob expression is composed of 5 elements")
         try:
             get_description(data)
-        except cron_descriptor.Exception.FormatException:
-            raise ValidationError("Not a valid cronjob expression")
+        except cron_descriptor.Exception.FormatException as err:
+            raise ValidationError("Not a valid cronjob expression") from err
 
         return data

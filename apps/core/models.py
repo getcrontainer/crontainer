@@ -2,7 +2,7 @@ import uuid
 
 import dateutil
 from django.db import models
-from django.db.models import CASCADE, PROTECT
+from django.db.models import PROTECT
 from django.utils import timezone
 
 category_choices = (
@@ -29,7 +29,7 @@ class Credential(models.Model):
     category = models.IntegerField(choices=category_choices, default=1, blank=True)
 
     def __str__(self):
-        return self.name
+        return str(self.name)
 
     def json(self):
         if self.category == 3:

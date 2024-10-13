@@ -13,4 +13,7 @@ isort "$repository_path"/apps
 
 echo "Running djlint"
 djlint --check "$repository_path"/apps
+
+echo "Running pylint"
+pylint .
 exit 0
