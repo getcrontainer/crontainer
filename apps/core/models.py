@@ -9,6 +9,7 @@ category_choices = (
     (1, "Dockerhub"),
     (2, "Github PAT"),
     (3, "AWS ECR"),
+    (4, "Gitlab PAT"),
     (98, "generic git"),
     (98, "generic registry"),
     (99, "generic HTTP auth"),
