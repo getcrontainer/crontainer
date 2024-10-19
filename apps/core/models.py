@@ -75,8 +75,8 @@ class Schedule(models.Model):
 
     def get_source_icon(self):
         if self.image.startswith("https://github.com"):
-            return "fas fa-code-branch fa-1x fa-fw"
-        return "fab fa-docker fa-1x fa-fw"
+            return "mdi mdi-github"
+        return "mdi mdi-docker"
 
 
 class Job(models.Model):
