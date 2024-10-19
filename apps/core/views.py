@@ -31,7 +31,7 @@ class ScheduleCreateView(CreateView):
         filename = f"ct_{schedule_id}"
         cmd = f"* * * * *   root	echo '{filename}'"
         crontab_path = os.path.join(settings.BASE_DIR, "cron.d", filename)
-        with open(crontab_path, "w") as fh:
+        with open(crontab_path, "w", encoding="utf-8") as fh:
             fh.write(cmd)
         return response
 

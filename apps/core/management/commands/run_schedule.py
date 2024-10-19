@@ -25,8 +25,8 @@ class Command(BaseCommand):
         schedule_id = options["schedule_id"]
         try:
             self.schedule = Schedule.objects.get(pk=schedule_id)
-        except Schedule.DoesNotExist:
-            raise CommandError('Schedule "%s" does not exist' % schedule_id)
+        except Schedule.DoesNotExist as exc:
+            raise CommandError(f"Schedule {schedule_id} does not exist") from exc
 
         self.job = Job.objects.create(schedule_id=schedule_id, provisioning=True)
 
@@ -36,7 +36,7 @@ class Command(BaseCommand):
             self.pull_image()
         self.start_container()
 
-        self.stdout.write(self.style.SUCCESS('Successfully started Schedule job "%s"' % schedule_id))
+        self.stdout.write(self.style.SUCCESS(f"Successfully started Schedule job {schedule_id}"))
 
     def build_image(self):
         try:

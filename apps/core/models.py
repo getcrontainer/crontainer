@@ -94,6 +94,7 @@ class Job(models.Model):
     exception_on_run = models.BooleanField(default=False)
 
     def duration(self):
+        # pylint: disable=unsubscriptable-object
         if self.status != "exited":
             return "n/a"
         try:

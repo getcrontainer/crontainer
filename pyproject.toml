@@ -21,5 +21,6 @@ disable = [
     "missing-function-docstring",
     "missing-module-docstring",
     "too-many-ancestors", # django can't cope well with this one
-    "too-few-public-methods" # django can't cope well with this one
+    "too-few-public-methods", # django can't cope well with this one
+    "fixme"
 ]
