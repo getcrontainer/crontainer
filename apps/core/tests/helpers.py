@@ -2,7 +2,7 @@ from django.db.models import QuerySet
 from django.forms import Form
 
 
-class EasyResponse(object):
+class EasyResponse:
     def __init__(self, response):
         self.response = response
 
@@ -12,9 +12,7 @@ class EasyResponse(object):
 
     @property
     def account_from_object_list(self):
-        return list(
-            set(self.response.context["object_list"].values_list("account", flat=True))
-        )
+        return list(set(self.response.context["object_list"].values_list("account", flat=True)))
 
     @property
     def form(self) -> Form:
