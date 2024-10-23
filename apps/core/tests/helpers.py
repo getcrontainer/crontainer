@@ -11,10 +11,6 @@ class EasyResponse:
         return self.response.context["object_list"]
 
     @property
-    def account_from_object_list(self):
-        return list(set(self.response.context["object_list"].values_list("account", flat=True)))
-
-    @property
     def form(self) -> Form:
         return self.response.context["form"]
 
