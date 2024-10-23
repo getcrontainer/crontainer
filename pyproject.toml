@@ -12,7 +12,7 @@ skip = "migrations"
 filter_files = true
 
 [tool.pylint]
-ignore=["migrations", "manage.py"]
+ignore = ["migrations", "manage.py", ".venv", "venv", ".env", "env"]
 disable = [
     "no-member", # Some members are created in runtime, pylint fails to detect such cases
     "line-too-long", # We already have this in black.
