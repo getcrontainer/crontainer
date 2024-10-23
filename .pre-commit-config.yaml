@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: pre-push
+        name: Run pre-push script
+        entry: .hooks/pre-push
+        language: script
+        files: .*
+        stages: [ pre-push ]
+        verbose: true
