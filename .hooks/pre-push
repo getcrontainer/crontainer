@@ -16,4 +16,7 @@ djlint --check "$repository_path"/apps
 
 echo "Running pylint"
 pylint .
+
+echo "Running tests"
+python3 "$repository_path"/manage.py test "$repository_path"/apps
 exit 0
