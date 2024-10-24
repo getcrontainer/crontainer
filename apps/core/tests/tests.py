@@ -146,3 +146,40 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(credential_object.category, 98)
         self.assertEqual(credential_object.username, "")
         self.assertTrue(credential_object.id)
+
+    def test_create_aws_credentials_failure(self):
+        response = self.client.post(reverse("credential-create"), data={"category": 3})
+        view = EasyResponse(response)
+
+        self.assertFalse(view.form.is_valid())
+
+        self.assertTrue(view.form.errors.get("name"))
+        self.assertFalse(view.form.errors.get("username"))
+        self.assertTrue(view.form.errors.get("password"))
+        self.assertFalse(view.form.errors.get("category"))
+
+        self.assertEqual(view.form.data.get("name"), None)
+        self.assertEqual(view.form.data.get("username"), None)
+        self.assertEqual(view.form.data.get("password"), None)
+        self.assertEqual(view.form.data.get("category"), "3")
+
+    def test_create_aws_credentials_success(self):
+        response = self.client.post(
+            reverse("credential-create"),
+            data={
+                "name": "aws",
+                "username": "aws_id",
+                "password": "aws_secret",
+                "category": 3,
+            },
+            follow=True,
+        )
+        view = EasyResponse(response)
+
+        credential_object: Credential = view.object_list.first()
+
+        self.assertEqual(credential_object.name, "aws")
+        self.assertEqual(credential_object.username, "aws_id")
+        self.assertEqual(credential_object.password, "aws_secret")
+        self.assertEqual(credential_object.category, 3)
+        self.assertTrue(credential_object.id)
