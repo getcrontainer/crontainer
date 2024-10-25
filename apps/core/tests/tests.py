@@ -154,7 +154,7 @@ class TestCredentialCreateView(TestCase):
         self.assertFalse(view.form.is_valid())
 
         self.assertTrue(view.form.errors.get("name"))
-        self.assertFalse(view.form.errors.get("username"))
+        self.assertTrue(view.form.errors.get("username"))
         self.assertTrue(view.form.errors.get("password"))
         self.assertFalse(view.form.errors.get("category"))
 
