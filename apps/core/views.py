@@ -72,6 +72,16 @@ class CredentialCreateView(CreateView):
     success_url = reverse_lazy("credential-list")
     fields = ["name", "username", "password", "category"]
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        category = self.request.GET.get("category") or self.request.POST.get("category")
+
+        if category == "3":  # AWS
+            form.fields["username"].required = True
+            form.fields["password"].required = True
+
+        return form
+
 
 class CredentialDeleteView(DeleteView):
     model = Credential
