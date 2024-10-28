@@ -5,19 +5,18 @@ from django.db import models
 from django.db.models import PROTECT
 from django.utils import timezone
 
-category_choices = (
-    (1, "Dockerhub"),
-    (2, "Github PAT"),
-    (3, "AWS ECR"),
-    (4, "Gitlab PAT"),
-    (98, "generic git"),
-    (98, "generic registry"),
-    (99, "generic HTTP auth"),
-)
+
+class Categories(models.IntegerChoices):
+    DOCKERHUB = 1
+    GITHUB_PAT = 2
+    AWS_ECR = 3
+    GITLAB_PAT = 4
+    GENERIC_GIT = 97
+    GENERIC_REGISTRY = 98
+    GENERIC_HTTP_AUTH = 99
 
 
 class Credential(models.Model):
-
     id = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True)
     name = models.SlugField(
         max_length=50,
@@ -27,7 +26,7 @@ class Credential(models.Model):
     )
     username = models.CharField(max_length=100, blank=True)
     password = models.CharField(max_length=100)
-    category = models.IntegerField(choices=category_choices, default=1, blank=True)
+    category = models.IntegerField(choices=Categories, default=1, blank=True)
 
     def __str__(self):
         return str(self.name)
