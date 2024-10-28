@@ -6,7 +6,7 @@ from django.db.models import PROTECT
 from django.utils import timezone
 
 
-class Categories(models.IntegerChoices):
+class CategoryChoices(models.IntegerChoices):
     DOCKERHUB = 1
     GITHUB_PAT = 2
     AWS_ECR = 3
@@ -26,7 +26,7 @@ class Credential(models.Model):
     )
     username = models.CharField(max_length=100, blank=True)
     password = models.CharField(max_length=100)
-    category = models.IntegerField(choices=Categories, default=1, blank=True)
+    category = models.IntegerField(choices=CategoryChoices, default=1, blank=True)
 
     def __str__(self):
         return str(self.name)
