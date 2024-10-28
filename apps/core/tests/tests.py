@@ -183,3 +183,22 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(credential_object.password, "aws_secret")
         self.assertEqual(credential_object.category, 3)
         self.assertTrue(credential_object.id)
+
+
+class TestCredentialDeleteView(TestCase):
+    def test_delete_credential(self):
+        credential = Credential.objects.create(
+            name="test",
+            username="test",
+            password="test",
+            category=1,
+        )
+
+        response = self.client.post(
+            reverse("credential-delete", kwargs={"pk": credential.id}),
+            follow=True,
+        )
+        view = EasyResponse(response)
+
+        self.assertFalse(Credential.objects.filter(id=credential.id).exists())
+        self.assertEqual(view.object_list.count(), 0)
