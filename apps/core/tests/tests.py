@@ -1,13 +1,15 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.core.models import Credential
+from apps.core.models import CategoryChoices, Credential
 from apps.core.tests.helpers import EasyResponse
 
 
 class TestCredentialCreateView(TestCase):
     def test_create_github_credentials_failure(self):
-        response = self.client.post(reverse("credential-create"), data={"category": 2})
+        response = self.client.post(
+            reverse("credential-create"), data={"category": CategoryChoices.GITHUB_PAT}
+        )
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
@@ -20,12 +22,18 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("name"), None)
         self.assertEqual(view.form.data.get("username"), None)
         self.assertEqual(view.form.data.get("password"), None)
-        self.assertEqual(view.form.data.get("category"), "2")
+        self.assertEqual(
+            view.form.data.get("category"), str(CategoryChoices.GITHUB_PAT)
+        )
 
     def test_create_github_credentials_success(self):
         response = self.client.post(
             reverse("credential-create"),
-            data={"name": "github", "password": "pass", "category": 2},
+            data={
+                "name": "github",
+                "password": "pass",
+                "category": CategoryChoices.GITHUB_PAT,
+            },
             follow=True,
         )
         view = EasyResponse(response)
@@ -34,12 +42,14 @@ class TestCredentialCreateView(TestCase):
 
         self.assertEqual(credential_object.name, "github")
         self.assertEqual(credential_object.password, "pass")
-        self.assertEqual(credential_object.category, 2)
+        self.assertEqual(credential_object.category, CategoryChoices.GITHUB_PAT)
         self.assertEqual(credential_object.username, "")
         self.assertTrue(credential_object.id)
 
     def test_create_dockerhub_credentials_failure(self):
-        response = self.client.post(reverse("credential-create"), data={"category": 1})
+        response = self.client.post(
+            reverse("credential-create"), data={"category": CategoryChoices.DOCKERHUB}
+        )
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
@@ -52,7 +62,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("name"), None)
         self.assertEqual(view.form.data.get("username"), None)
         self.assertEqual(view.form.data.get("password"), None)
-        self.assertEqual(view.form.data.get("category"), "1")
+        self.assertEqual(view.form.data.get("category"), str(CategoryChoices.DOCKERHUB))
 
     def test_create_dockerhub_credentials_success(self):
         response = self.client.post(
@@ -61,7 +71,7 @@ class TestCredentialCreateView(TestCase):
                 "name": "dockerhub",
                 "username": "user",
                 "password": "pass",
-                "category": 1,
+                "category": CategoryChoices.DOCKERHUB,
             },
             follow=True,
         )
@@ -71,12 +81,14 @@ class TestCredentialCreateView(TestCase):
 
         self.assertEqual(credential_object.name, "dockerhub")
         self.assertEqual(credential_object.password, "pass")
-        self.assertEqual(credential_object.category, 1)
+        self.assertEqual(credential_object.category, CategoryChoices.DOCKERHUB)
         self.assertEqual(credential_object.username, "user")
         self.assertTrue(credential_object.id)
 
     def test_create_gitlab_credentials_failure(self):
-        response = self.client.post(reverse("credential-create"), data={"category": 4})
+        response = self.client.post(
+            reverse("credential-create"), data={"category": CategoryChoices.GITLAB_PAT}
+        )
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
@@ -89,7 +101,9 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("name"), None)
         self.assertEqual(view.form.data.get("username"), None)
         self.assertEqual(view.form.data.get("password"), None)
-        self.assertEqual(view.form.data.get("category"), "4")
+        self.assertEqual(
+            view.form.data.get("category"), str(CategoryChoices.GITLAB_PAT)
+        )
 
     def test_create_gitlab_credentials_success(self):
         response = self.client.post(
@@ -97,7 +111,7 @@ class TestCredentialCreateView(TestCase):
             data={
                 "name": "gitlab",
                 "password": "pass",
-                "category": 4,
+                "category": CategoryChoices.GITLAB_PAT,
             },
             follow=True,
         )
@@ -107,12 +121,14 @@ class TestCredentialCreateView(TestCase):
 
         self.assertEqual(credential_object.name, "gitlab")
         self.assertEqual(credential_object.password, "pass")
-        self.assertEqual(credential_object.category, 4)
+        self.assertEqual(credential_object.category, CategoryChoices.GITLAB_PAT)
         self.assertEqual(credential_object.username, "")
         self.assertTrue(credential_object.id)
 
     def test_create_generic_git_credentials_failure(self):
-        response = self.client.post(reverse("credential-create"), data={"category": 98})
+        response = self.client.post(
+            reverse("credential-create"), data={"category": CategoryChoices.GENERIC_GIT}
+        )
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
@@ -125,7 +141,9 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("name"), None)
         self.assertEqual(view.form.data.get("username"), None)
         self.assertEqual(view.form.data.get("password"), None)
-        self.assertEqual(view.form.data.get("category"), "98")
+        self.assertEqual(
+            view.form.data.get("category"), str(CategoryChoices.GENERIC_GIT)
+        )
 
     def test_create_generic_git_credentials_success(self):
         response = self.client.post(
@@ -133,7 +151,7 @@ class TestCredentialCreateView(TestCase):
             data={
                 "name": "git",
                 "password": "pass",
-                "category": 98,
+                "category": CategoryChoices.GENERIC_GIT,
             },
             follow=True,
         )
@@ -143,12 +161,14 @@ class TestCredentialCreateView(TestCase):
 
         self.assertEqual(credential_object.name, "git")
         self.assertEqual(credential_object.password, "pass")
-        self.assertEqual(credential_object.category, 98)
+        self.assertEqual(credential_object.category, CategoryChoices.GENERIC_GIT)
         self.assertEqual(credential_object.username, "")
         self.assertTrue(credential_object.id)
 
     def test_create_aws_credentials_failure(self):
-        response = self.client.post(reverse("credential-create"), data={"category": 3})
+        response = self.client.post(
+            reverse("credential-create"), data={"category": CategoryChoices.AWS_ECR}
+        )
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
@@ -161,7 +181,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("name"), None)
         self.assertEqual(view.form.data.get("username"), None)
         self.assertEqual(view.form.data.get("password"), None)
-        self.assertEqual(view.form.data.get("category"), "3")
+        self.assertEqual(view.form.data.get("category"), str(CategoryChoices.AWS_ECR))
 
     def test_create_aws_credentials_success(self):
         response = self.client.post(
@@ -170,7 +190,7 @@ class TestCredentialCreateView(TestCase):
                 "name": "aws",
                 "username": "aws_id",
                 "password": "aws_secret",
-                "category": 3,
+                "category": CategoryChoices.AWS_ECR,
             },
             follow=True,
         )
@@ -181,7 +201,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(credential_object.name, "aws")
         self.assertEqual(credential_object.username, "aws_id")
         self.assertEqual(credential_object.password, "aws_secret")
-        self.assertEqual(credential_object.category, 3)
+        self.assertEqual(credential_object.category, CategoryChoices.AWS_ECR)
         self.assertTrue(credential_object.id)
 
 
