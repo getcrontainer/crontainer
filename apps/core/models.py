@@ -11,8 +11,8 @@ class CategoryChoices(models.IntegerChoices):
     GITHUB_PAT = 2
     AWS_ECR = 3
     GITLAB_PAT = 4
-    GENERIC_GIT = 97
-    GENERIC_REGISTRY = 98
+    GENERIC_REGISTRY = 97
+    GENERIC_GIT = 98
     GENERIC_HTTP_AUTH = 99
 
 
