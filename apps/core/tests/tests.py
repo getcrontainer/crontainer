@@ -202,3 +202,28 @@ class TestCredentialDeleteView(TestCase):
 
         self.assertFalse(Credential.objects.filter(id=credential.id).exists())
         self.assertEqual(view.object_list.count(), 0)
+
+
+class TestCredentialListView(TestCase):
+    def test_list_credentials(self):
+        Credential.objects.create(
+            name="test",
+            username="test",
+            password="test",
+            category=1,
+        )
+
+        response = self.client.get(reverse("credential-list"))
+        view = EasyResponse(response)
+
+        self.assertEqual(view.object_list.count(), 1)
+        self.assertEqual(view.object_list.first().name, "test")
+        self.assertEqual(view.object_list.first().username, "test")
+        self.assertEqual(view.object_list.first().password, "test")
+        self.assertEqual(view.object_list.first().category, 1)
+
+    def test_list_credentials_empty(self):
+        response = self.client.get(reverse("credential-list"))
+        view = EasyResponse(response)
+
+        self.assertEqual(view.object_list.count(), 0)
