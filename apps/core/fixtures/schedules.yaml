@@ -52,6 +52,14 @@
     cpu: 1
     memory: 500
 
+- model: core.credential
+  pk: "8049305b-a889-4e74-be20-6c65b8761f27"
+  fields:
+    name: "private ghcr"
+    category: 2
+    username: "getcrontainer"
+    password: "ghcr-password"
+
 - model: core.schedule
   pk: 45669795-5e00-480f-8502-af0195a592fc
   fields:
