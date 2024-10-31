@@ -1,5 +1,6 @@
 import os
 
+from django import forms
 from django.conf import settings
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -86,3 +87,24 @@ class CredentialCreateView(CreateView):
 class CredentialDeleteView(DeleteView):
     model = Credential
     success_url = reverse_lazy("credential-list")
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["agreement"] = forms.BooleanField(
+            label="I understand that this action will remove the credential from these schedules and disable them.",
+            required=True,
+        )
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["related_schedules"] = self.get_object().schedule_set.all()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        for schedule in self.get_object().schedule_set.all():
+            schedule.credential = None
+            schedule.active = False
+            schedule.save()
+
+        return self.delete(request, *args, **kwargs)
