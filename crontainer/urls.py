@@ -21,15 +21,16 @@ from django.contrib import admin
 from django.urls import path
 
 from apps.core.views import (
-    ScheduleCreateView,
-    ScheduleListView,
-    ScheduleDeleteView,
+    CredentialCreateView,
+    CredentialDeleteView,
+    CredentialListView,
+    CredentialUpdateView,
     JobListView,
     JobLogDetailView,
-    CredentialListView,
-    CredentialCreateView,
+    ScheduleCreateView,
+    ScheduleDeleteView,
+    ScheduleListView,
     ScheduleUpdateView,
-    CredentialDeleteView,
 )
 
 urlpatterns = [
@@ -43,6 +44,11 @@ urlpatterns = [
     path("credentials/", CredentialListView.as_view(), name="credential-list"),
     path(
         "credentials/create/", CredentialCreateView.as_view(), name="credential-create"
+    ),
+    path(
+        "credentials/update/<uuid:pk>/",
+        CredentialUpdateView.as_view(),
+        name="credential-update",
     ),
     path(
         "credentials/delete/<uuid:pk>/",
