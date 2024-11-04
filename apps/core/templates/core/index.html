@@ -78,7 +78,7 @@
                                 {{ schedule.memory }} MB
                             </td>
                         {% else %}
-                            <i class="fas fa-infinity"></i>
+                            <span class="mdi mdi-infinity"></span>
                         {% endif %}
                         <td class="px-6 py-4">
                             <a href="{% url 'schedule-delete' schedule.id %}"
