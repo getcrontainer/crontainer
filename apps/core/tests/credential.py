@@ -7,9 +7,7 @@ from apps.core.tests.helpers import EasyResponse
 
 class TestCredentialCreateView(TestCase):
     def test_create_github_credentials_failure(self):
-        response = self.client.post(
-            reverse("credential-create"), data={"category": CategoryChoices.GITHUB_PAT}
-        )
+        response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.GITHUB_PAT})
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
@@ -22,9 +20,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("name"), None)
         self.assertEqual(view.form.data.get("username"), None)
         self.assertEqual(view.form.data.get("password"), None)
-        self.assertEqual(
-            view.form.data.get("category"), str(CategoryChoices.GITHUB_PAT)
-        )
+        self.assertEqual(view.form.data.get("category"), str(CategoryChoices.GITHUB_PAT))
 
     def test_create_github_credentials_success(self):
         response = self.client.post(
@@ -47,9 +43,7 @@ class TestCredentialCreateView(TestCase):
         self.assertTrue(credential_object.id)
 
     def test_create_dockerhub_credentials_failure(self):
-        response = self.client.post(
-            reverse("credential-create"), data={"category": CategoryChoices.DOCKERHUB}
-        )
+        response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.DOCKERHUB})
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
@@ -86,9 +80,7 @@ class TestCredentialCreateView(TestCase):
         self.assertTrue(credential_object.id)
 
     def test_create_gitlab_credentials_failure(self):
-        response = self.client.post(
-            reverse("credential-create"), data={"category": CategoryChoices.GITLAB_PAT}
-        )
+        response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.GITLAB_PAT})
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
@@ -101,9 +93,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("name"), None)
         self.assertEqual(view.form.data.get("username"), None)
         self.assertEqual(view.form.data.get("password"), None)
-        self.assertEqual(
-            view.form.data.get("category"), str(CategoryChoices.GITLAB_PAT)
-        )
+        self.assertEqual(view.form.data.get("category"), str(CategoryChoices.GITLAB_PAT))
 
     def test_create_gitlab_credentials_success(self):
         response = self.client.post(
@@ -126,9 +116,7 @@ class TestCredentialCreateView(TestCase):
         self.assertTrue(credential_object.id)
 
     def test_create_generic_git_credentials_failure(self):
-        response = self.client.post(
-            reverse("credential-create"), data={"category": CategoryChoices.GENERIC_GIT}
-        )
+        response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.GENERIC_GIT})
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
@@ -141,9 +129,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("name"), None)
         self.assertEqual(view.form.data.get("username"), None)
         self.assertEqual(view.form.data.get("password"), None)
-        self.assertEqual(
-            view.form.data.get("category"), str(CategoryChoices.GENERIC_GIT)
-        )
+        self.assertEqual(view.form.data.get("category"), str(CategoryChoices.GENERIC_GIT))
 
     def test_create_generic_git_credentials_success(self):
         response = self.client.post(
@@ -166,9 +152,7 @@ class TestCredentialCreateView(TestCase):
         self.assertTrue(credential_object.id)
 
     def test_create_aws_credentials_failure(self):
-        response = self.client.post(
-            reverse("credential-create"), data={"category": CategoryChoices.AWS_ECR}
-        )
+        response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.AWS_ECR})
         view = EasyResponse(response)
 
         self.assertFalse(view.form.is_valid())
