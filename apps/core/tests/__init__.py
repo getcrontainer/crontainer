@@ -3,7 +3,7 @@ from .credential import (
     TestCredentialDeleteView,
     TestCredentialListView,
 )
-from .schedule import TestScheduleCreateView
+from .schedule import TestScheduleCreateView, TestScheduleDeleteView
 
 __all__ = [
     # Credential
@@ -12,4 +12,5 @@ __all__ = [
     "TestCredentialListView",
     # Schedule
     "TestScheduleCreateView",
+    "TestScheduleDeleteView",
 ]
