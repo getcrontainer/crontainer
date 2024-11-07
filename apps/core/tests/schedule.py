@@ -91,3 +91,33 @@ class TestScheduleDeleteView(TestCase):
     def test_post_not_found(self):
         response = self.client.post("/delete/999/")
         self.assertEqual(response.status_code, 404)
+
+
+class TestScheduleListView(TestCase):
+    def test_get_empty(self):
+        response = self.client.get("/")
+
+        view = EasyResponse(response)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(view.object_list.count(), 0)
+
+    def test_get_with_data(self):
+        schedule = Schedule.objects.create(
+            name="test",
+            cron_rule="0 0 * * *",
+            image="test",
+        )
+
+        schedule.save()
+
+        response = self.client.get("/")
+
+        view = EasyResponse(response)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn(schedule, view.object_list)
+
+        self.assertEqual(view.object_list.count(), 1)
