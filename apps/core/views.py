@@ -26,7 +26,6 @@ class ScheduleCreateView(CreateView):
     success_url = "/"
 
     def form_valid(self, form):
-        print("Create crontab entry")
         response = super().form_valid(form)
         schedule_id = str(self.object.id)
         filename = f"ct_{schedule_id}"
