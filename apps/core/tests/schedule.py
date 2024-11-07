@@ -1,5 +1,6 @@
 from django.test import TestCase
 
+from apps.core.models import Schedule
 from apps.core.tests.helpers import EasyResponse
 
 
@@ -72,3 +73,21 @@ class TestScheduleCreateView(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, "/")
+
+
+class TestScheduleDeleteView(TestCase):
+    def test_post(self):
+        schedule = Schedule.objects.create(
+            name="test",
+            cron_rule="0 0 * * *",
+            image="test",
+        )
+        schedule.save()
+
+        response = self.client.post(f"/delete/{schedule.pk}/")
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, "/")
+
+    def test_post_not_found(self):
+        response = self.client.post("/delete/999/")
+        self.assertEqual(response.status_code, 404)
