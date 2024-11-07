@@ -31,7 +31,7 @@ class ScheduleCreateView(CreateView):
         schedule_id = str(self.object.id)
         filename = f"ct_{schedule_id}"
         cmd = f"* * * * *   root	echo '{filename}'"
-        crontab_path = os.path.join(settings.BASE_DIR, "cron.d", filename)
+        crontab_path = settings.CRONTAB_PATH / filename
         with open(crontab_path, "w", encoding="utf-8") as fh:
             fh.write(cmd)
         return response
@@ -48,7 +48,7 @@ class ScheduleDeleteView(DeleteView):
     success_url = "/"
 
     def form_valid(self, form):
-        file_path = os.path.join(settings.BASE_DIR, "cron.d", f"ct_{self.object.id}")
+        file_path = settings.CRONTAB_PATH / f"ct_{self.object.id}"
         if os.path.exists(file_path):
             os.remove(file_path)
         return super().form_valid(form)

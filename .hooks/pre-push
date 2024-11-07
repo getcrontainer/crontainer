@@ -18,5 +18,8 @@ echo "Running pylint"
 pylint .
 
 echo "Running tests"
+export DJANGO_TEST=1
+rm -rf "/tmp/cron.d/"
+mkdir -p "/tmp/cron.d/"
 python3 "$repository_path"/manage.py test "$repository_path"/apps
 exit 0
