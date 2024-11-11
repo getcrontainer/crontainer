@@ -123,6 +123,7 @@ class DescribeCronView(View):
     def get(self, request):
         cron_options = cron_descriptor.Options()
         cron_options.verbose = True
+        cron_options.use_24hour_time_format = True
 
         cron_rule = request.GET.get("cron_rule")
 
