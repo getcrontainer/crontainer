@@ -25,6 +25,7 @@ from apps.core.views import (
     CredentialDeleteView,
     CredentialListView,
     CredentialUpdateView,
+    DescribeCronView,
     JobListView,
     JobLogDetailView,
     ScheduleCreateView,
@@ -55,4 +56,5 @@ urlpatterns = [
         CredentialDeleteView.as_view(),
         name="credential-delete",
     ),
+    path("describe_cron/", DescribeCronView.as_view(), name="describe_cron"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
