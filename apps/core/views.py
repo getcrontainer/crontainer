@@ -126,7 +126,7 @@ class DescribeCronView(View):
 
         cron_rule = request.GET.get("cron_rule")
 
-        print(f"{cron_rule=}")
-
-        description = cron_descriptor.ExpressionDescriptor(cron_rule, cron_options).get_description()
+        description = cron_descriptor.ExpressionDescriptor(
+            cron_rule, cron_options
+        ).get_description()
         return HttpResponse(description)
