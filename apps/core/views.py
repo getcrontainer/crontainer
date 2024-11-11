@@ -1,7 +1,9 @@
 import os
 
+import cron_descriptor
 from django import forms
 from django.conf import settings
+from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -9,6 +11,7 @@ from django.views.generic import (
     DetailView,
     ListView,
     UpdateView,
+    View,
 )
 
 from apps.core.forms import ScheduleCreateForm, ScheduleUpdateForm
@@ -114,3 +117,18 @@ class CredentialDeleteView(DeleteView):
             schedule.save()
 
         return self.delete(request, *args, **kwargs)
+
+
+class DescribeCronView(View):
+    def get(self, request):
+        cron_options = cron_descriptor.Options()
+        cron_options.verbose = True
+
+        cron_rule = request.GET.get("cron_rule")
+
+        print(f"{cron_rule=}")
+
+        description = cron_descriptor.ExpressionDescriptor(
+            cron_rule, cron_options
+        ).get_description()
+        return HttpResponse(description)
