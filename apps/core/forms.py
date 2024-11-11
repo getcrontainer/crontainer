@@ -60,6 +60,16 @@ class ScheduleUpdateForm(forms.ModelForm):
             "memory",
         ]
 
+        widgets = {
+            "cron_rule": forms.TextInput(
+                attrs={
+                    "hx-get": reverse_lazy("describe_cron"),
+                    "hx-trigger": "input change delay:500ms",
+                    "hx-target": "#cron-description",
+                }
+            ),
+        }
+
     def clean_cron_rule(self):
         data = self.cleaned_data["cron_rule"]
         if len(data.split(" ")) != 5:
