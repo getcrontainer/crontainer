@@ -2,6 +2,7 @@ import cron_descriptor
 from cron_descriptor import get_description
 from django import forms
 from django.core.exceptions import ValidationError
+from django.urls import reverse_lazy
 
 from apps.core.models import Schedule
 
@@ -21,6 +22,16 @@ class ScheduleCreateForm(forms.ModelForm):
             "cpu",
             "memory",
         ]
+
+        widgets = {
+            "cron_rule": forms.TextInput(
+                attrs={
+                    "hx-get": reverse_lazy("describe_cron"),
+                    "hx-trigger": "input change delay:500ms",
+                    "hx-target": "#cron-description",
+                }
+            ),
+        }
 
     def clean_cron_rule(self):
         data = self.cleaned_data["cron_rule"]
