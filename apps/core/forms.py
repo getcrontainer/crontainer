@@ -44,6 +44,15 @@ class ScheduleCreateForm(forms.ModelForm):
 
         return data
 
+    def clean_env_vars(self):
+        keys = self.data.getlist("env_vars_keys")
+        values = self.data.getlist("env_vars_values")
+
+        if len(keys) != len(values):
+            raise ValidationError("Keys and values must have the same length")
+
+        return dict(zip(keys, values))
+
 
 class ScheduleUpdateForm(forms.ModelForm):
     class Meta:
