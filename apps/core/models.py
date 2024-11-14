@@ -1,9 +1,15 @@
 import uuid
 
 import dateutil
+from cron_descriptor import ExpressionDescriptor, Options as CronOptions
 from django.db import models
 from django.db.models import PROTECT
 from django.utils import timezone
+
+cron_options = CronOptions()
+
+cron_options.verbose = True
+cron_options.use_24hour_time_format = True
 
 
 class CategoryChoices(models.IntegerChoices):
@@ -76,6 +82,10 @@ class Schedule(models.Model):
         if self.image.startswith("https://github.com"):
             return "mdi mdi-github"
         return "mdi mdi-docker"
+
+    @property
+    def cron_description(self):
+        return ExpressionDescriptor(self.cron_rule, options=cron_options).get_description()
 
 
 class Job(models.Model):
