@@ -18,7 +18,7 @@
                 {{ form.cron_rule|add_label_class:"block p-1" }}
                 {{ form.cron_rule|add_class:"rounded-md w-full border-gray-300"|add_error_class:"text-red-400" }}
                 <span id="cron-description" class="text-gray-500 dark:text-gray-300">
-                    {% if form.cron_rule.value %}{{ form.cron_rule.value|describe_cron }}{% endif %}
+                    {% if form.cron_rule.value %}{{ form.instance.cron_description }}{% endif %}
                 </span>
                 <span class="text-red-500 text-sm">{{ form.cron_rule.errors }}</span>
             </div>
