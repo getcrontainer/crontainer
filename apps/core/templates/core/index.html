@@ -58,7 +58,11 @@
                                 <div class="font-normal text-gray-500">{{ schedule.id }}</div>
                             </div>
                         </th>
-                        <td class="px-6 py-4">{{ schedule.cron_rule }}</td>
+                        <td class="px-6 py-4">
+                            <span data-tooltip-target="cron-description-{{ schedule.id }}">
+                                {{ schedule.cron_rule }}
+                            </span>
+                        </td>
                         <td class="px-6 py-4">
                         {# Tooltips #}
                         <div id="credential-status-{{ schedule.id }}" role="tooltip"
@@ -75,6 +79,12 @@
                             {{ schedule.source_name }}
                             <div class="tooltip-arrow" data-popper-arrow></div>
                         </div>
+                        <div id="cron-description-{{ schedule.id }}" role="tooltip"
+                             class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 tooltip dark:bg-gray-700">
+                            {{ schedule.cron_description }}
+                            <div class="tooltip-arrow" data-popper-arrow></div>
+                        </div>
+                        {# End tooltips #}
                         <div class="flex items-center">
                             <i data-tooltip-target="credential-status-{{ schedule.id }}"
                                class="mdi me-4 {% if schedule.credential %} mdi-lock-outline {% else %} mdi-lock-open-variant-outline text-gray-300{% endif %}"></i>
