@@ -1,7 +1,7 @@
 import uuid
 
 import dateutil
-from cron_descriptor import ExpressionDescriptor
+from cron_descriptor import ExpressionDescriptor, FormatException, MissingFieldException
 from cron_descriptor import Options as CronOptions
 from django.db import models
 from django.db.models import PROTECT
@@ -86,7 +86,10 @@ class Schedule(models.Model):
 
     @property
     def cron_description(self):
-        return ExpressionDescriptor(self.cron_rule, options=cron_options).get_description()
+        try:
+            return ExpressionDescriptor(self.cron_rule, options=cron_options).get_description()
+        except (MissingFieldException, FormatException):
+            return "Invalid cron rule"
 
 
 class Job(models.Model):
