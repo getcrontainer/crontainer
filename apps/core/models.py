@@ -1,7 +1,8 @@
 import uuid
 
 import dateutil
-from cron_descriptor import ExpressionDescriptor, Options as CronOptions
+from cron_descriptor import ExpressionDescriptor
+from cron_descriptor import Options as CronOptions
 from django.db import models
 from django.db.models import PROTECT
 from django.utils import timezone
