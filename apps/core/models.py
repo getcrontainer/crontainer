@@ -80,9 +80,15 @@ class Schedule(models.Model):
     memory = models.IntegerField(null=True, blank=True)
 
     def get_source_icon(self):
+        return f"mdi mdi-{self.source_name.lower()}"
+
+    @property
+    def source_name(self):
         if self.image.startswith("https://github.com"):
-            return "mdi mdi-github"
-        return "mdi mdi-docker"
+            return "GitHub"
+        if self.image.startswith("https://gitlab.com"):
+            return "GitLab"
+        return "Docker"
 
     @property
     def cron_description(self):
