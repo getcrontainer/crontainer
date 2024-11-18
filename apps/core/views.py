@@ -138,13 +138,13 @@ class NodeListView(ListView):
 class NodeCreateView(CreateView):
     model = Node
     success_url = reverse_lazy("node-list")
-    fields = ["name", "host", "port", "secret"]
+    fields = ["name", "host", "port", "use_ssh", "secret"]
 
 
 class NodeUpdateView(UpdateView):
     model = Node
-    fields = ["name", "host", "port", "secret"]
     success_url = reverse_lazy("node-list")
+    fields = ["name", "host", "port", "use_ssh", "secret"]
 
 
 class NodeDeleteView(DeleteView):
