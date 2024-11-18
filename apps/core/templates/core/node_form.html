@@ -10,8 +10,7 @@
         {% endif %}
     </h3>
     <div>
-        <form action="{% url 'node-create' %}"
-              method="POST">
+        <form action="{% url 'node-create' %}" method="POST">
             <div class="max-w-2xl">
                 {% csrf_token %}
                 <div>
@@ -31,9 +30,7 @@
                         <span class="text-red-500 text-sm">{{ form.port.errors }}</span>
                     </div>
                     <div class="flex-initial w-24 ">
-                        <div class="pt-10">
-                            {{ form.use_ssh|add_class:"rounded" }} Use SSH
-                        </div>
+                        <div class="pt-10">{{ form.use_ssh|add_class:"rounded" }} Use SSH</div>
                         <p class="mt-2 text-gray-600 text-sm">{{ form.use_ssh.help_text }}</p>
                     </div>
                 </div>
