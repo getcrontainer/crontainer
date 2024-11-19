@@ -23,8 +23,8 @@ from django.urls import path
 from apps.core.views import (CredentialCreateView, CredentialDeleteView, CredentialListView, CredentialUpdateView,
                              DescribeCronView,
                              JobListView, JobLogDetailView,
-                             NodeCreateView, NodeDeleteView, NodeListView, NodeUpdateView,
                              ScheduleCreateView, ScheduleDeleteView, ScheduleListView, ScheduleUpdateView)
+from apps.node.views import NodeCreateView, NodeDeleteView, NodeListView, NodeUpdateView
 
 urlpatterns = [
     path("admin/", admin.site.urls),

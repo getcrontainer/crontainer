@@ -15,7 +15,7 @@ from django.views.generic import (
 )
 
 from apps.core.forms import ScheduleCreateForm, ScheduleUpdateForm
-from apps.core.models import Credential, Job, Node, Schedule
+from apps.core.models import Credential, Job, Schedule
 
 
 class ScheduleListView(ListView):
@@ -129,24 +129,3 @@ class DescribeCronView(View):
 
         description = cron_descriptor.ExpressionDescriptor(cron_rule, cron_options).get_description()
         return HttpResponse(description)
-
-
-class NodeListView(ListView):
-    model = Node
-
-
-class NodeCreateView(CreateView):
-    model = Node
-    success_url = reverse_lazy("node-list")
-    fields = ["name", "host", "port", "use_ssh", "secret"]
-
-
-class NodeUpdateView(UpdateView):
-    model = Node
-    success_url = reverse_lazy("node-list")
-    fields = ["name", "host", "port", "use_ssh", "secret"]
-
-
-class NodeDeleteView(DeleteView):
-    model = Node
-    success_url = reverse_lazy("node-list")
