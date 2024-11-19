@@ -18,13 +18,12 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 from apps.core.views import (CredentialCreateView, CredentialDeleteView, CredentialListView, CredentialUpdateView,
                              DescribeCronView,
                              JobListView, JobLogDetailView,
                              ScheduleCreateView, ScheduleDeleteView, ScheduleListView, ScheduleUpdateView)
-from apps.node.views import NodeCreateView, NodeDeleteView, NodeListView, NodeUpdateView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -48,9 +47,6 @@ urlpatterns = [
         CredentialDeleteView.as_view(),
         name="credential-delete",
     ),
-    path("node/", NodeListView.as_view(), name="node-list"),
-    path("node/create/", NodeCreateView.as_view(), name="node-create"),
-    path("node/update/<uuid:pk>/", NodeUpdateView.as_view(), name="node-update"),
-    path("node/delete/<uuid:pk>/", NodeDeleteView.as_view(), name="node-delete"),
     path("describe_cron/", DescribeCronView.as_view(), name="describe_cron"),
+    path("node/", include("apps.node.urls")),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
