@@ -10,8 +10,7 @@
         {% endif %}
     </h3>
     <div>
-        <form action="{% if form.instance.pk %}{% url 'node-update' form.instance.pk %}{% else %} {% url 'node-create' %}{% endif %}"
-              method="POST">
+        <form action="." method="POST">
             <div class="max-w-2xl">
                 {% csrf_token %}
                 <div>
