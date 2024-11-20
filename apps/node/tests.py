@@ -20,7 +20,7 @@ class TestNodeCreateView(TestCase):
                 "use_ssh": False,
                 "secret": "test",
             },
-            follow=True
+            follow=True,
         )
         view = EasyResponse(response)
 
@@ -29,10 +29,14 @@ class TestNodeCreateView(TestCase):
     def test_post_invalid(self):
         response = self.client.post(reverse("node-create"), {})
         view = EasyResponse(response)
-        self.assertEqual(view.form.errors,
-                         {"name": ["This field is required."],
-                          "host": ["This field is required."],
-                          "port": ["This field is required."]})
+        self.assertEqual(
+            view.form.errors,
+            {
+                "name": ["This field is required."],
+                "host": ["This field is required."],
+                "port": ["This field is required."],
+            },
+        )
         self.assertEqual(response.status_code, 200)
 
 
@@ -59,7 +63,7 @@ class TestNodeUpdateView(TestCase):
                 "use_ssh": False,
                 "secret": "test",
             },
-            follow=True
+            follow=True,
         )
         view = EasyResponse(response)
 
@@ -68,10 +72,14 @@ class TestNodeUpdateView(TestCase):
     def test_post_invalid(self):
         response = self.client.post(reverse("node-update", kwargs={"pk": self.node.id}), {})
         view = EasyResponse(response)
-        self.assertEqual(view.form.errors,
-                         {"name": ["This field is required."],
-                          "host": ["This field is required."],
-                          "port": ["This field is required."]})
+        self.assertEqual(
+            view.form.errors,
+            {
+                "name": ["This field is required."],
+                "host": ["This field is required."],
+                "port": ["This field is required."],
+            },
+        )
         self.assertEqual(response.status_code, 200)
 
 
