@@ -77,7 +77,15 @@ class Command(BaseCommand):
         image = self.local_image or self.schedule.image
         cmd = self.schedule.cmd or None
         try:
-            client.containers.run(image, cmd, detach=True, name=self.job.id, environment=self.schedule.env_vars)
+            client.containers.run(
+                image,
+                cmd,
+                detach=True,
+                name=self.job.id,
+                environment=self.schedule.env_vars,
+                # Docker API expects memory in bytes
+                mem_limit=self.schedule.memory_limit * int(1e6),
+            )
             self.job.provisioning = False
             self.job.save()
         except docker.errors.APIError as e:
