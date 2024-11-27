@@ -77,7 +77,7 @@ class Schedule(models.Model):
     )
 
     cpu = models.IntegerField(null=True, blank=True)
-    memory = models.IntegerField(null=True, blank=True)
+    memory = models.IntegerField(null=True, blank=True, help_text="Memory in MB")
 
     def get_source_icon(self):
         return f"mdi mdi-{self.source_name.lower()}"
