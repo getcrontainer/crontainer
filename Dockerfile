@@ -12,4 +12,6 @@ RUN python manage.py migrate
 
 RUN python manage.py loaddata ./apps/core/fixtures/schedules.yaml
 
+RUN python manage.py collectstatic --noinput
+
 CMD ["gunicorn", "crontainer.wsgi", "--bind", "0.0.0.0:8000"]
