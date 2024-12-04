@@ -1,0 +1,11 @@
+services:
+  demo:
+    container_name: crontainer
+    build: git@github.com:getcrontainer/crontainer.git#main
+
+    ports:
+      - "8000:8000"
+    volumes:
+      - /etc/cron.d:/app/cron.d
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .env:/app/.env
