@@ -86,6 +86,8 @@ class Command(BaseCommand):
                 environment=self.schedule.env_vars,
                 # Docker API expects memory in bytes
                 mem_limit=self.schedule.memory * int(1e6),
+                # Docker API expects CPU in nano_cpus (where 1 CPU = 1e9 nano_cpus)
+                nano_cpus=self.schedule.cpu * int(1e9),
             )
             self.job.provisioning = False
             self.job.save()
