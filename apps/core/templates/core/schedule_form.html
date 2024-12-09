@@ -63,6 +63,7 @@
                 <div class="me-2">
                     {{ form.cpu|add_label_class:"block p-1" }}
                     {{ form.cpu|add_class:"rounded-md w-full border-gray-300" }}
+                    <span class="text-sm p-1">{{ form.cpu.help_text }}</span>
                 </div>
                 <div class="ms-2">
                     {{ form.memory|add_label_class:"block p-1" }}

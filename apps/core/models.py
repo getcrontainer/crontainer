@@ -1,8 +1,7 @@
 import uuid
 
 import dateutil
-from cron_descriptor import ExpressionDescriptor, FormatException, MissingFieldException
-from cron_descriptor import Options as CronOptions
+from cron_descriptor import ExpressionDescriptor, FormatException, MissingFieldException, Options as CronOptions
 from django.db import models
 from django.db.models import PROTECT
 from django.utils import timezone
@@ -76,7 +75,7 @@ class Schedule(models.Model):
         verbose_name="Credentials",
     )
 
-    cpu = models.IntegerField(null=True, blank=True)
+    cpu = models.IntegerField(null=True, blank=True, help_text="Number of CPUs")
     memory = models.IntegerField(null=True, blank=True, help_text="Memory in MB")
 
     def get_source_icon(self):
