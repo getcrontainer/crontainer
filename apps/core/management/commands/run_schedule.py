@@ -85,7 +85,7 @@ class Command(BaseCommand):
                 name=self.job.id,
                 environment=self.schedule.env_vars,
                 # Docker API expects memory in bytes
-                mem_limit=self.schedule.memory_limit * int(1e6),
+                mem_limit=self.schedule.memory * int(1e6),
             )
             self.job.provisioning = False
             self.job.save()
