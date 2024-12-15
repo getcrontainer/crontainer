@@ -21,6 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["*"]),
+    CRONJOB_CMD=(str, "{cron_rule}\troot\tpython3 /app/manage.py run_schedule {schedule_id}"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -138,3 +139,5 @@ if os.environ.get("DJANGO_TEST"):
     CRONTAB_PATH = Path("/tmp/cron.d")
 else:
     CRONTAB_PATH = BASE_DIR / "cron.d"
+
+CRONJOB_CMD = env("CRONJOB_CMD")

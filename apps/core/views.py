@@ -31,11 +31,10 @@ class ScheduleCreateView(CreateView):
     def form_valid(self, form):
         response = super().form_valid(form)
         schedule_id = str(self.object.id)
-        filename = f"ct_{schedule_id}"
-        cmd = f"* * * * *   root	echo '{filename}'"
-        crontab_path = settings.CRONTAB_PATH / filename
+        cmd = settings.CRONJOB_CMD.format(schedule_id=schedule_id, cron_rule=self.object.cron_rule)
+        crontab_path = settings.CRONTAB_PATH / f"ct_{schedule_id}"
         with open(crontab_path, "w", encoding="utf-8") as fh:
-            fh.write(cmd)
+            fh.write(cmd + "\n")
         return response
 
 
