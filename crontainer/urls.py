@@ -50,3 +50,9 @@ urlpatterns = [
     path("describe_cron/", DescribeCronView.as_view(), name="describe_cron"),
     path("node/", include("apps.node.urls")),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+
+if settings.DEBUG:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
+    urlpatterns += debug_toolbar_urls()

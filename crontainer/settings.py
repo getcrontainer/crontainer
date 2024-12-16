@@ -137,3 +137,13 @@ STATICFILES_DIRS = [BASE_DIR / "apps/static"]
 
 CRONTAB_PATH = Path(env("CRONTAB_PATH"))
 CRONJOB_CMD = env("CRONJOB_CMD")
+
+# Debug toolbar settings
+if DEBUG:
+    INSTALLED_APPS += ["debug_toolbar"]
+    # Middleware should be placed right after anything that encodes the response's content
+    # (in this case, WhiteNoise)
+    MIDDLEWARE.insert(2, "debug_toolbar.middleware.DebugToolbarMiddleware")
+    INTERNAL_IPS = [
+        "127.0.0.1",
+    ]
