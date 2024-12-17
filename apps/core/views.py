@@ -126,5 +126,8 @@ class DescribeCronView(View):
 
         cron_rule = request.GET.get("cron_rule")
 
-        description = cron_descriptor.ExpressionDescriptor(cron_rule, cron_options).get_description()
+        try:
+            description = cron_descriptor.ExpressionDescriptor(cron_rule, cron_options).get_description()
+        except (cron_descriptor.FormatException, cron_descriptor.Exception.MissingFieldException):
+            return HttpResponse("Invalid cron expression")
         return HttpResponse(description)
