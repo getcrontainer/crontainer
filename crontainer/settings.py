@@ -10,7 +10,6 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
-import os
 from pathlib import Path
 
 import environ
@@ -22,6 +21,7 @@ env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["*"]),
     CRONJOB_CMD=(str, "{cron_rule}\troot\tpython3 /app/manage.py run_schedule {schedule_id}"),
+    CRONTAB_PATH=(str, "/tmp/cron.d"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -135,9 +135,5 @@ STATICFILES_DIRS = [BASE_DIR / "apps/static"]
 
 # Crontab settings
 
-if os.environ.get("DJANGO_TEST"):
-    CRONTAB_PATH = Path("/tmp/cron.d")
-else:
-    CRONTAB_PATH = BASE_DIR / "cron.d"
-
+CRONTAB_PATH = Path(env("CRONTAB_PATH"))
 CRONJOB_CMD = env("CRONJOB_CMD")
