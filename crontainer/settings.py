@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["*"]),
-    CRONJOB_CMD=(str, "{cron_rule}\troot\tpython3 /app/manage.py run_schedule {schedule_id}"),
+    CRONJOB_CMD=(str, "{cron_rule}\troot\tcd /app && python3 /app/manage.py run_schedule {schedule_id}"),
     CRONTAB_PATH=(str, "/tmp/cron.d"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
