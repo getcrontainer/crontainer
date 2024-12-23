@@ -23,10 +23,15 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         schedule_id = options["schedule_id"]
+
         try:
             self.schedule = Schedule.objects.get(pk=schedule_id)
         except Schedule.DoesNotExist as exc:
             raise CommandError(f"Schedule {schedule_id} does not exist") from exc
+
+        if not self.schedule.active:
+            self.stdout.write(self.style.WARNING(f"Schedule {schedule_id} is not active, aborting..."))
+            sys.exit(0)
 
         self.job = Job.objects.create(schedule_id=schedule_id, provisioning=True)
 
