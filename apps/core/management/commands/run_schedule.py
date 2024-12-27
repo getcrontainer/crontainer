@@ -2,6 +2,7 @@ import sys
 import time
 
 import docker
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.core.models import Job, Schedule
@@ -24,15 +25,34 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         schedule_id = options["schedule_id"]
 
+        # Check if schedule exists
+        #
         try:
             self.schedule = Schedule.objects.get(pk=schedule_id)
         except Schedule.DoesNotExist as exc:
             raise CommandError(f"Schedule {schedule_id} does not exist") from exc
+        except ValidationError as exc:
+            raise CommandError(f"Input {schedule_id} is not a valid schedule id format") from exc
 
+        # Check if schedule is active
+        #
         if not self.schedule.active:
             self.stdout.write(self.style.WARNING(f"Schedule {schedule_id} is not active, aborting..."))
             sys.exit(0)
 
+        # Check if schedule is a singleton and no previous job is already running
+        #
+        if self.schedule.singleton:
+            if Job.objects.filter(schedule_id=schedule_id).exclude(status="exited").exists():
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Schedule {schedule_id} is a singleton and a Job is already running, aborting..."
+                    )
+                )
+                sys.exit(0)
+
+        # Job Provisioning
+        #
         self.job = Job.objects.create(schedule_id=schedule_id, provisioning=True)
 
         if self.schedule.image.lower().startswith(("http://", "https://")):
@@ -41,7 +61,7 @@ class Command(BaseCommand):
             self.pull_image()
         self.start_container()
 
-        self.stdout.write(self.style.SUCCESS(f"Successfully started Schedule job {schedule_id}"))
+        self.stdout.write(self.style.SUCCESS(f"Successfully started job from Schedule {schedule_id}"))
         self.stdout.write(self.style.SUCCESS(f"Job ID: {self.job.id}"))
 
     def build_image(self):
