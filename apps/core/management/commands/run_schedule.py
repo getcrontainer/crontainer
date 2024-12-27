@@ -102,6 +102,11 @@ class Command(BaseCommand):
     def start_container(self):
         image = self.local_image or self.schedule.image
         cmd = self.schedule.cmd or None
+        # Docker API expects memory in bytes
+        memory_limit = self.schedule.memory * int(1e6) if self.schedule.memory else None
+        # Docker API expects CPU in nano_cpus (where 1 CPU = 1e9 nano_cpus)
+        cpu_limit = self.schedule.cpu * int(1e9) if self.schedule.cpu else None
+
         try:
             client.containers.run(
                 image,
@@ -109,10 +114,8 @@ class Command(BaseCommand):
                 detach=True,
                 name=self.job.id,
                 environment=self.schedule.env_vars,
-                # Docker API expects memory in bytes
-                mem_limit=self.schedule.memory * int(1e6),
-                # Docker API expects CPU in nano_cpus (where 1 CPU = 1e9 nano_cpus)
-                nano_cpus=self.schedule.cpu * int(1e9),
+                mem_limit=memory_limit,
+                nano_cpus=cpu_limit,
             )
             self.job.provisioning = False
             self.job.save()
