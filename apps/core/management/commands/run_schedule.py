@@ -61,43 +61,43 @@ class Command(BaseCommand):
             self.pull_image()
         self.start_container()
 
-        self.stdout.write(self.style.SUCCESS(f"Successfully started job from Schedule {schedule_id}"))
-        self.stdout.write(self.style.SUCCESS(f"Job ID: {self.job.id}"))
+        self.stdout.write(self.style.SUCCESS(f"[{schedule_id}] successfully started job: {self.job.id}"))
 
     def build_image(self):
+        start_time = time.time()
+        self.stdout.write(self.style.WARNING(f"[{self.schedule.id}] building image {self.schedule.image}"))
         try:
-            x = client.images.build(path=self.schedule.image + "#main", tag="abacate:latest")
-            for i in x[1]:
-                print(i)
-            self.local_image = "abacate:latest"
+            _image, build_log = client.images.build(
+                path=self.schedule.image + "#main", tag=f"{self.schedule.id}:latest"
+            )
+            for step in build_log:
+                assert step
+            self.local_image = f"{self.schedule.id}:latest"
 
         except Exception as e:
-            self.job.exception_on_build = True
-            self.job.log = e
-            self.job.status = "failure"
-            self.job.status_code = -100
-            self.job.save()
-            self.stdout.write(self.style.ERROR(f"Failed to [build image] for Schedule job {self.schedule.id}"))
+            self.process_exception(e, "build")
+            self.stdout.write(self.style.ERROR(f"[{self.schedule.id}] failed to build image"))
             sys.exit(0)
+
+        elapsed_time = time.time() - start_time
+        self.stdout.write(self.style.WARNING(f"[{self.schedule.id}] build image time: {elapsed_time:.2f}s"))
 
     def pull_image(self):
         start_time = time.time()
-        print("Pulling image")
+        self.stdout.write(self.style.WARNING(f"[{self.schedule.id}] pulling image {self.schedule.image}"))
         credential = self.schedule.credential
         credential = credential.json() if credential else None
         try:
-            client.images.pull(self.schedule.image, auth_config=credential)
-            # client.api.pull(self.schedule.image, auth_config=credential)
+            response = client.api.pull(self.schedule.image, auth_config=credential, stream=True, decode=True)
+            for step in response:
+                assert step
         except Exception as e:
-            self.job.exception_on_pull = True
-            self.job.log = e
-            self.job.status = "failure"
-            self.job.status_code = -200
-            self.job.save()
-            self.stdout.write(self.style.ERROR(f"Failed to [pull image] for Schedule job {self.schedule.id}"))
+            self.process_exception(e, "pull")
+            self.stdout.write(self.style.ERROR(f"[{self.schedule.id}] failed to pull image"))
             sys.exit(0)
 
-        print(time.time() - start_time)
+        elapsed_time = time.time() - start_time
+        self.stdout.write(self.style.WARNING(f"[{self.schedule.id}] pull image time: {elapsed_time:.2f}s"))
 
     def start_container(self):
         image = self.local_image or self.schedule.image
@@ -120,10 +120,31 @@ class Command(BaseCommand):
             self.job.provisioning = False
             self.job.save()
         except docker.errors.APIError as e:
-            self.job.exception_on_run = True
-            self.job.log = e
-            self.job.status = "failure"
-            self.job.status_code = -300
-            self.job.save()
+            self.process_exception(e, "run")
             self.stdout.write(self.style.ERROR(f"Failed to [run container] for Schedule job {self.schedule.id}"))
             sys.exit(0)
+
+    def process_exception(self, e: Exception, step: str) -> None:
+        """
+        Handles and processes exceptions occurring during specific steps of a job execution.
+        Updates job attributes to reflect the encountered error, modifies the job status, and logs
+        the exception.
+
+        Parameters:
+            e (Exception): The exception object that should be logged and processed.
+            step (str): The job execution step where the exception occurred. Expected values are
+                "run", "build", or "pull".
+        """
+        if step == "run":
+            self.job.exception_on_run = True
+            self.job.status_code = -300
+        elif step == "build":
+            self.job.exception_on_build = True
+            self.job.status_code = -100
+        elif step == "pull":
+            self.job.exception_on_pull = True
+            self.job.status_code = -200
+
+        self.job.log = e
+        self.job.status = "failure"
+        self.job.save()
