@@ -7,6 +7,7 @@ from .describe_cron import TestDescribeCronView
 from .schedule import (
     TestScheduleCreateView,
     TestScheduleDeleteView,
+    TestScheduleEnvVars,
     TestScheduleListView,
 )
 
@@ -18,6 +19,7 @@ __all__ = [
     # Schedule
     "TestScheduleCreateView",
     "TestScheduleDeleteView",
+    "TestScheduleEnvVars",
     "TestScheduleListView",
     # Miscellaneous,
     "TestDescribeCronView",
