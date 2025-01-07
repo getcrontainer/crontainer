@@ -46,6 +46,7 @@
                 <button type="button" class="btn btn-success btn-round" onclick="addEnvVar()">
                     <span class="mdi mdi-plus-thick"></span>
                 </button>
+                {{ form.env_vars.errors }}
             </div>
             <div>
                 {{ form.image|add_label_class:"block p-1" }}
