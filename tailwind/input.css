@@ -30,4 +30,13 @@
     .btn-disabled {
         @apply text-gray-400 bg-gray-200 cursor-not-allowed;
     }
+
+    /* allauth */
+    .allauth-input {
+        @apply p-1 rounded-md border-gray-300;
+    }
+
+    .allauth-checkbox {
+        @apply rounded;
+    }
 }
