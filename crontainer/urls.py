@@ -27,6 +27,7 @@ from apps.core.views import (CredentialCreateView, CredentialDeleteView, Credent
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("accounts/", include("allauth.urls")),
     path("", ScheduleListView.as_view(), name="schedule-list"),
     path("create/", ScheduleCreateView.as_view()),
     path("update/<uuid:pk>/", ScheduleUpdateView.as_view(), name="schedule-update"),

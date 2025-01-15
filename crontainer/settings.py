@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.node",
     "widget_tweaks",
+    "allauth",
+    "allauth.account",
 ]
 
 MIDDLEWARE = [
@@ -59,6 +61,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "crontainer.urls"
@@ -66,7 +69,7 @@ ROOT_URLCONF = "crontainer.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "apps/allauth/templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -87,6 +90,14 @@ WSGI_APPLICATION = "crontainer.wsgi.application"
 DATABASES = {
     "default": env.db(default="sqlite:///db.sqlite3"),
 }
+
+# Authentication
+# https://docs.djangoproject.com/en/5.0/ref/settings/#auth
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
