@@ -1,3 +1,6 @@
+import uuid
+
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -6,6 +9,14 @@ from apps.core.tests.helpers import EasyResponse
 
 
 class TestCredentialCreateView(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = get_user_model().objects.create(username="test", password="test")
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
     def test_create_github_credentials_failure(self):
         response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.GITHUB_PAT})
         view = EasyResponse(response)
@@ -188,8 +199,21 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(credential_object.category, CategoryChoices.AWS_ECR)
         self.assertTrue(credential_object.id)
 
+    def test_create_credential_unauthorized(self):
+        self.client.logout()
+        response = self.client.get(reverse("credential-create"))
+        self.assertEqual(response.status_code, 302)
+
 
 class TestCredentialDeleteView(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = get_user_model().objects.create(username="test", password="test")
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
     def test_delete_credential(self):
         credential = Credential.objects.create(
             name="test",
@@ -207,8 +231,21 @@ class TestCredentialDeleteView(TestCase):
         self.assertFalse(Credential.objects.filter(id=credential.id).exists())
         self.assertEqual(view.object_list.count(), 0)
 
+    def test_delete_credential_unauthorized(self):
+        self.client.logout()
+        response = self.client.get(reverse("credential-delete", kwargs={"pk": uuid.uuid4()}))
+        self.assertEqual(response.status_code, 302)
+
 
 class TestCredentialListView(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = get_user_model().objects.create(username="test", password="test")
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
     def test_list_credentials(self):
         Credential.objects.create(
             name="test",
@@ -231,3 +268,8 @@ class TestCredentialListView(TestCase):
         view = EasyResponse(response)
 
         self.assertEqual(view.object_list.count(), 0)
+
+    def test_list_credentials_unauthorized(self):
+        self.client.logout()
+        response = self.client.get(reverse("credential-list"))
+        self.assertEqual(response.status_code, 302)

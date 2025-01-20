@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -6,6 +7,14 @@ from apps.node.models import Node
 
 
 class TestNodeCreateView(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = get_user_model().objects.create(username="test", password="test")
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
     def test_get(self):
         response = self.client.get(reverse("node-create"))
         self.assertEqual(response.status_code, 200)
@@ -39,9 +48,22 @@ class TestNodeCreateView(TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_unauthorized(self):
+        self.client.logout()
+        response = self.client.get(reverse("node-create"))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, "/accounts/login/?next=/node/create/")
+
 
 class TestNodeUpdateView(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = get_user_model().objects.create(username="test", password="test")
+
     def setUp(self):
+        self.client.force_login(self.user)
+
         self.node = Node.objects.create(
             name="test",
             host="test",
@@ -82,9 +104,22 @@ class TestNodeUpdateView(TestCase):
         )
         self.assertEqual(response.status_code, 200)
 
+    def test_unauthorized(self):
+        self.client.logout()
+        response = self.client.get(reverse("node-update", kwargs={"pk": self.node.id}))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, f"/accounts/login/?next=/node/update/{self.node.id}/")
+
 
 class TestNodeDeleteView(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user = get_user_model().objects.create(username="test", password="test")
+
     def setUp(self):
+        self.client.force_login(self.user)
+
         self.node = Node.objects.create(
             name="test",
             host="test",
