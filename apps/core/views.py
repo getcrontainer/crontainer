@@ -3,6 +3,7 @@ import os
 import cron_descriptor
 from django import forms
 from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -18,12 +19,12 @@ from apps.core.forms import ScheduleCreateForm, ScheduleUpdateForm
 from apps.core.models import Credential, Job, Schedule
 
 
-class ScheduleListView(ListView):
+class ScheduleListView(LoginRequiredMixin, ListView):
     template_name = "core/index.html"
     model = Schedule
 
 
-class ScheduleCreateView(CreateView):
+class ScheduleCreateView(LoginRequiredMixin, CreateView):
     model = Schedule
     form_class = ScheduleCreateForm
     success_url = "/"
@@ -38,13 +39,13 @@ class ScheduleCreateView(CreateView):
         return response
 
 
-class ScheduleUpdateView(UpdateView):
+class ScheduleUpdateView(LoginRequiredMixin, UpdateView):
     model = Schedule
     form_class = ScheduleUpdateForm
     success_url = "/"
 
 
-class ScheduleDeleteView(DeleteView):
+class ScheduleDeleteView(LoginRequiredMixin, DeleteView):
     model = Schedule
     success_url = "/"
 
@@ -55,21 +56,21 @@ class ScheduleDeleteView(DeleteView):
         return super().form_valid(form)
 
 
-class JobListView(ListView):
+class JobListView(LoginRequiredMixin, ListView):
     model = Job
     success_url = "/"
 
 
-class JobLogDetailView(DetailView):
+class JobLogDetailView(LoginRequiredMixin, DetailView):
     model = Job
     template_name = "core/job_log.html"
 
 
-class CredentialListView(ListView):
+class CredentialListView(LoginRequiredMixin, ListView):
     model = Credential
 
 
-class CredentialCreateView(CreateView):
+class CredentialCreateView(LoginRequiredMixin, CreateView):
     model = Credential
     success_url = reverse_lazy("credential-list")
     fields = ["name", "username", "password", "category"]
@@ -85,14 +86,14 @@ class CredentialCreateView(CreateView):
         return form
 
 
-class CredentialUpdateView(UpdateView):
+class CredentialUpdateView(LoginRequiredMixin, UpdateView):
     model = Credential
     fields = ["name", "username", "password", "category"]
 
     success_url = reverse_lazy("credential-list")
 
 
-class CredentialDeleteView(DeleteView):
+class CredentialDeleteView(LoginRequiredMixin, DeleteView):
     model = Credential
     success_url = reverse_lazy("credential-list")
 
@@ -118,7 +119,7 @@ class CredentialDeleteView(DeleteView):
         return self.delete(request, *args, **kwargs)
 
 
-class DescribeCronView(View):
+class DescribeCronView(LoginRequiredMixin, View):
     def get(self, request):
         cron_options = cron_descriptor.Options()
         cron_options.verbose = True
