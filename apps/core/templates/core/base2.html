@@ -82,6 +82,23 @@
                                     <span class="ml-3">Nodes</span>
                                 </a>
                             </li>
+                            {% if user.is_authenticated %}
+                                <li>
+                                    <a href="{% url 'account_logout' %}"
+                                       class="flex items-center p-2 text-base font-medium text-red-600 rounded-lg dark:text-red-200 hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                                        <span class="mdi mdi-exit-to-app"></span>
+                                        <span class="ml-3">Sign out</span>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li>
+                                    <a href="{% url 'account_login' %}"
+                                       class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                                        <span class="mdi mdi-login"></span>
+                                        <span class="ml-3">Sign in</span>
+                                    </a>
+                                </li>
+                            {% endif %}
                         </ul>
                         <ul class="pt-5 mt-5 space-y-2 border-t border-gray-200 dark:border-gray-700">
                             <li>
