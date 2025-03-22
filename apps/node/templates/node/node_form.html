@@ -1,14 +1,14 @@
 {% extends 'core/base2.html' %}
 {% load widget_tweaks %}
 {% block content %}
-    <h3>
-        Node ::
-        {% if node %}
-            Update
+    <div class="container border-b-2 p-2 shadow-sm">
+        <a href="{% url 'node-list' %}" type="button" class="btn-create">BACK TO NODES</a>
+        {% if object %}
+            <h3 class="text-gray-600">Update Node</h3>
         {% else %}
-            Create
+            <h3 class="text-gray-600">New Node</h3>
         {% endif %}
-    </h3>
+    </div>
     <div>
         <form action="." method="POST">
             <div class="max-w-2xl">

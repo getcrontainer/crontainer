@@ -1,7 +1,10 @@
 {% extends 'core/base2.html' %}
 {% load widget_tweaks %}
 {% block content %}
-    <h3>Node :: Remove</h3>
+    <div class="container border-b-2 p-2 shadow-sm">
+        <a href="{% url 'node-list' %}" type="button" class="btn-create">BACK TO NODES</a>
+        <h3 class="text-gray-600">Remove Node</h3>
+    </div>
     <form action="." method="post">
         {% csrf_token %}
         <p>
