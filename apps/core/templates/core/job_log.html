@@ -1,22 +1,11 @@
 {% extends 'core/base2.html' %}
 {% block content %}
-    <a href="/create/"
-       type="button"
-       class=" float-end text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-full text-sm p-2.5 text-center inline-flex items-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-        <svg class="w-6 h-6"
-             aria-hidden="true"
-             xmlns="http://www.w3.org/2000/svg"
-             width="24"
-             height="24"
-             fill="none"
-             viewBox="0 0 24 24">
-            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7V5" />
-        </svg>
-        <span class="sr-only">Icon description</span>
-    </a>
-    <h3>
-        Cron<span class="text-gray-500">tainer</span> Schedules
-    </h3>
+    <div class="container border-b-2 p-2">
+        <a href="{% url 'job-list' %}" type="button" class="btn-create">BACK TO JOBS</a>
+        <h3 class="text-gray-600">Job Log</h3>
+        <span><b>JobID:</b> {{ object.id }}</span> /
+        <span><b>Schedule</b>: {{ object.schedule.name }}</span>
+    </div>
     <div class="relative overflow-x-auto _shadow-md _sm:rounded-lg">
         <pre>{{ job.log }}</pre>
     </div>

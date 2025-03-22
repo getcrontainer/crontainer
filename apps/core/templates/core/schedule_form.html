@@ -2,9 +2,16 @@
 {% load widget_tweaks %}
 {% load describe_cron %}
 {% block content %}
+    <div class="container border-b-2 p-2">
+        <a href="/" type="button" class="btn-create">BACK TO SCHEDULES</a>
+        {% if object.id %}
+            <h3 class="text-gray-600">Update Schedule</h3>
+        {% else %}
+            <h3 class="text-gray-600">Create new Schedule</h3>
+        {% endif %}
+    </div>
     <form action="." method="POST">
         {% csrf_token %}
-        <h3>Schedules :: Create</h3>
         {{ form.non_field_errors }}
         <div class="">
             <div>
