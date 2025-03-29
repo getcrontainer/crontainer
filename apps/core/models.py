@@ -99,6 +99,9 @@ class Schedule(models.Model):
 
 
 class Job(models.Model):
+    class Meta:
+        ordering = ["-created_at"]
+
     id = models.UUIDField(default=uuid.uuid4, primary_key=True, unique=True)
     schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
     state = models.JSONField(null=True)
