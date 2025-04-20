@@ -26,6 +26,7 @@ module.exports = {
         fontFamily: {
             'body': [
                 'Roboto',
+                'Inter',
                 'ui-sans-serif',
                 'system-ui',
                 '-apple-system',
@@ -42,7 +43,7 @@ module.exports = {
                 'Noto Color Emoji'
             ],
             'sans': [
-                'Roboto',
+                'Inter',
                 'ui-sans-serif',
                 'system-ui',
                 '-apple-system',
@@ -66,4 +67,3 @@ module.exports = {
         require('flowbite-typography'),
     ],
 }
-
