@@ -1,16 +1,28 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from apps.core.models import Schedule
-from apps.core.tests.helpers import EasyResponse
+from apps.core.tests.helpers import EasyResponse, add_default_data
+
+User = get_user_model()
 
 
 class TestScheduleCreateView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        add_default_data()
+
+    def setUp(self):
+        self.user = User.objects.get(username="testuser")
+
     def test_get(self):
+        self.client.force_login(self.user)
         response = self.client.get("/create/")
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "core/schedule_form.html")
 
     def test_post_empty(self):
+        self.client.force_login(self.user)
         response = self.client.post(
             "/create/",
             {
@@ -40,6 +52,7 @@ class TestScheduleCreateView(TestCase):
         )
 
     def test_post_invalid_cron_rule(self):
+        self.client.force_login(self.user)
         response = self.client.post(
             "/create/",
             {
@@ -62,6 +75,7 @@ class TestScheduleCreateView(TestCase):
         )
 
     def test_post_valid(self):
+        self.client.force_login(self.user)
         response = self.client.post(
             "/create/",
             {
@@ -76,7 +90,15 @@ class TestScheduleCreateView(TestCase):
 
 
 class TestScheduleDeleteView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        add_default_data()
+
+    def setUp(self):
+        self.user = User.objects.get(username="testuser")
+
     def test_post(self):
+        self.client.force_login(self.user)
         schedule = Schedule.objects.create(
             name="test",
             cron_rule="0 0 * * *",
@@ -89,12 +111,21 @@ class TestScheduleDeleteView(TestCase):
         self.assertRedirects(response, "/")
 
     def test_post_not_found(self):
+        self.client.force_login(self.user)
         response = self.client.post("/delete/999/")
         self.assertEqual(response.status_code, 404)
 
 
 class TestScheduleListView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        add_default_data()
+
+    def setUp(self):
+        self.user = User.objects.get(username="testuser")
+
     def test_get_empty(self):
+        self.client.force_login(self.user)
         response = self.client.get("/")
 
         view = EasyResponse(response)
@@ -104,6 +135,7 @@ class TestScheduleListView(TestCase):
         self.assertEqual(view.object_list.count(), 0)
 
     def test_get_with_data(self):
+        self.client.force_login(self.user)
         schedule = Schedule.objects.create(
             name="test",
             cron_rule="0 0 * * *",

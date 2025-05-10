@@ -1,12 +1,23 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from apps.core.models import CategoryChoices, Credential
-from apps.core.tests.helpers import EasyResponse
+from apps.core.tests.helpers import EasyResponse, add_default_data
+
+User = get_user_model()
 
 
 class TestCredentialCreateView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        add_default_data()
+
+    def setUp(self):
+        self.user = User.objects.get(username="testuser")
+
     def test_create_github_credentials_failure(self):
+        self.client.force_login(self.user)
         response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.GITHUB_PAT})
         view = EasyResponse(response)
 
@@ -23,6 +34,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("category"), str(CategoryChoices.GITHUB_PAT))
 
     def test_create_github_credentials_success(self):
+        self.client.force_login(self.user)
         response = self.client.post(
             reverse("credential-create"),
             data={
@@ -43,6 +55,7 @@ class TestCredentialCreateView(TestCase):
         self.assertTrue(credential_object.id)
 
     def test_create_dockerhub_credentials_failure(self):
+        self.client.force_login(self.user)
         response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.DOCKERHUB})
         view = EasyResponse(response)
 
@@ -59,6 +72,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("category"), str(CategoryChoices.DOCKERHUB))
 
     def test_create_dockerhub_credentials_success(self):
+        self.client.force_login(self.user)
         response = self.client.post(
             reverse("credential-create"),
             data={
@@ -80,6 +94,7 @@ class TestCredentialCreateView(TestCase):
         self.assertTrue(credential_object.id)
 
     def test_create_gitlab_credentials_failure(self):
+        self.client.force_login(self.user)
         response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.GITLAB_PAT})
         view = EasyResponse(response)
 
@@ -96,6 +111,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("category"), str(CategoryChoices.GITLAB_PAT))
 
     def test_create_gitlab_credentials_success(self):
+        self.client.force_login(self.user)
         response = self.client.post(
             reverse("credential-create"),
             data={
@@ -116,6 +132,7 @@ class TestCredentialCreateView(TestCase):
         self.assertTrue(credential_object.id)
 
     def test_create_generic_git_credentials_failure(self):
+        self.client.force_login(self.user)
         response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.GENERIC_GIT})
         view = EasyResponse(response)
 
@@ -132,6 +149,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("category"), str(CategoryChoices.GENERIC_GIT))
 
     def test_create_generic_git_credentials_success(self):
+        self.client.force_login(self.user)
         response = self.client.post(
             reverse("credential-create"),
             data={
@@ -152,6 +170,7 @@ class TestCredentialCreateView(TestCase):
         self.assertTrue(credential_object.id)
 
     def test_create_aws_credentials_failure(self):
+        self.client.force_login(self.user)
         response = self.client.post(reverse("credential-create"), data={"category": CategoryChoices.AWS_ECR})
         view = EasyResponse(response)
 
@@ -168,6 +187,7 @@ class TestCredentialCreateView(TestCase):
         self.assertEqual(view.form.data.get("category"), str(CategoryChoices.AWS_ECR))
 
     def test_create_aws_credentials_success(self):
+        self.client.force_login(self.user)
         response = self.client.post(
             reverse("credential-create"),
             data={
@@ -190,7 +210,15 @@ class TestCredentialCreateView(TestCase):
 
 
 class TestCredentialDeleteView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        add_default_data()
+
+    def setUp(self):
+        self.user = User.objects.get(username="testuser")
+
     def test_delete_credential(self):
+        self.client.force_login(self.user)
         credential = Credential.objects.create(
             name="test",
             username="test",
@@ -209,7 +237,15 @@ class TestCredentialDeleteView(TestCase):
 
 
 class TestCredentialListView(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        add_default_data()
+
+    def setUp(self):
+        self.user = User.objects.get(username="testuser")
+
     def test_list_credentials(self):
+        self.client.force_login(self.user)
         Credential.objects.create(
             name="test",
             username="test",
@@ -227,6 +263,7 @@ class TestCredentialListView(TestCase):
         self.assertEqual(view.object_list.first().category, 1)
 
     def test_list_credentials_empty(self):
+        self.client.force_login(self.user)
         response = self.client.get(reverse("credential-list"))
         view = EasyResponse(response)
 
