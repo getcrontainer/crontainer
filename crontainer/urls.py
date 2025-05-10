@@ -18,12 +18,22 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.auth.views import LoginView
 from django.urls import include, path
 
-from apps.core.views import (CredentialCreateView, CredentialDeleteView, CredentialListView, CredentialUpdateView,
-                             DescribeCronView,
-                             JobListView, JobLogDetailView,
-                             ScheduleCreateView, ScheduleDeleteView, ScheduleListView, ScheduleUpdateView)
+from apps.core.views import (
+    CredentialCreateView,
+    CredentialDeleteView,
+    CredentialListView,
+    CredentialUpdateView,
+    DescribeCronView,
+    JobListView,
+    JobLogDetailView,
+    ScheduleCreateView,
+    ScheduleDeleteView,
+    ScheduleListView,
+    ScheduleUpdateView,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -34,21 +44,12 @@ urlpatterns = [
     path("job/", JobListView.as_view(), name="job-list"),
     path("job/log/<uuid:pk>/", JobLogDetailView.as_view(), name="job-log"),
     path("credentials/", CredentialListView.as_view(), name="credential-list"),
-    path(
-        "credentials/create/", CredentialCreateView.as_view(), name="credential-create"
-    ),
-    path(
-        "credentials/update/<uuid:pk>/",
-        CredentialUpdateView.as_view(),
-        name="credential-update",
-    ),
-    path(
-        "credentials/delete/<uuid:pk>/",
-        CredentialDeleteView.as_view(),
-        name="credential-delete",
-    ),
+    path("credentials/create/", CredentialCreateView.as_view(), name="credential-create"),
+    path("credentials/update/<uuid:pk>/", CredentialUpdateView.as_view(), name="credential-update"),
+    path("credentials/delete/<uuid:pk>/", CredentialDeleteView.as_view(), name="credential-delete"),
     path("describe_cron/", DescribeCronView.as_view(), name="describe_cron"),
     path("node/", include("apps.node.urls")),
+    path("login/", LoginView.as_view(), name="login"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 

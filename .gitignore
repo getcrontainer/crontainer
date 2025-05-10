@@ -162,3 +162,5 @@ cython_debug/
 .idea/
 node_modules/
 cron.d/*
+.junie/
+settings.toml
