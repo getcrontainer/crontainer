@@ -4,9 +4,11 @@ services:
     build: .
 
     ports:
-      - "8000:8000"
+      - "9090:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       DEBUG: False
       CRONTAB_PATH: "/etc/cron.d"
+      ADMIN_USERNAME: "admin"
+      ADMIN_PASSWORD: "admin"
