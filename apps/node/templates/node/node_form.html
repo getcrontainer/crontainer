@@ -1,47 +1,46 @@
-{% extends 'core/base.html' %}
+{% extends 'core/base2.html' %}
 {% load widget_tweaks %}
 {% block content %}
-    <div class="container border-b-2 p-2">
-        <a href="{% url 'node-list' %}" type="button" class="btn-create">BACK TO NODES</a>
-        {% if object %}
-            <h3 class="text-gray-600">Update Node</h3>
-        {% else %}
-            <h3 class="text-gray-600">New Node</h3>
-        {% endif %}
+    <div class="container p-2">
+        <h3 class="text-3xl text-gray-700 font-medium">
+            {% if object %}
+                Update Node
+            {% else %}
+                New Node
+            {% endif %}
+        </h3>
     </div>
-    <div>
+    <div class="max-w-2xl p-6">
         <form action="." method="POST">
-            <div class="max-w-2xl">
-                {% csrf_token %}
-                <div>
-                    {{ form.name|add_label_class:"block p-1" }}
-                    {{ form.name|add_class:"rounded-md w-full border-gray-300" }}
-                    <span class="text-red-500 text-sm">{{ form.name.errors }}</span>
+            {% csrf_token %}
+            <div>
+                {{ form.name|add_label_class:"block p-1" }}
+                {{ form.name|add_class:"rounded-md w-full border-gray-300" }}
+                <span class="text-red-500 text-sm">{{ form.name.errors }}</span>
+            </div>
+            <div class="flex space-x-2">
+                <div class="flex-auto">
+                    {{ form.host|add_label_class:"block p-1" }}
+                    {{ form.host|add_class:"rounded-md w-full border-gray-300" }}
+                    <span class="text-red-500 text-sm">{{ form.host.errors }}</span>
                 </div>
-                <div class="flex space-x-2">
-                    <div class="flex-auto">
-                        {{ form.host|add_label_class:"block p-1" }}
-                        {{ form.host|add_class:"rounded-md w-full border-gray-300" }}
-                        <span class="text-red-500 text-sm">{{ form.host.errors }}</span>
-                    </div>
-                    <div class="flex-initial w-24">
-                        {{ form.port|add_label_class:"block p-1" }}
-                        {{ form.port|add_class:"rounded-md w-full border-gray-300" }}
-                        <span class="text-red-500 text-sm">{{ form.port.errors }}</span>
-                    </div>
-                    <div class="flex-initial w-24 ">
-                        <div class="pt-10">{{ form.use_ssh|add_class:"rounded" }} Use SSH</div>
-                        <p class="mt-2 text-gray-600 text-sm">{{ form.use_ssh.help_text }}</p>
-                    </div>
+                <div class="flex-initial w-24">
+                    {{ form.port|add_label_class:"block p-1" }}
+                    {{ form.port|add_class:"rounded-md w-full border-gray-300" }}
+                    <span class="text-red-500 text-sm">{{ form.port.errors }}</span>
                 </div>
-                <div>
-                    {{ form.secret|add_label_class:"block p-1" }}
-                    {{ form.secret|add_class:"rounded-md w-full border-gray-300" }}
-                    <span class="text-red-500 text-sm">{{ form.secret.errors }}</span>
+                <div class="flex-initial w-24 ">
+                    <div class="pt-10">{{ form.use_ssh|add_class:"rounded" }} Use SSH</div>
+                    <p class="mt-2 text-gray-600 text-sm">{{ form.use_ssh.help_text }}</p>
                 </div>
-                <div class="text-right mt-5">
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
+            </div>
+            <div>
+                {{ form.secret|add_label_class:"block p-1" }}
+                {{ form.secret|add_class:"rounded-md w-full border-gray-300" }}
+                <span class="text-red-500 text-sm">{{ form.secret.errors }}</span>
+            </div>
+            <div class="text-right mt-5">
+                <button type="submit" class="btn btn-primary">Save</button>
             </div>
         </form>
     </div>

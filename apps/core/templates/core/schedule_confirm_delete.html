@@ -1,16 +1,17 @@
-{% extends 'core/base.html' %}
+{% extends 'core/base2.html' %}
 {% load widget_tweaks %}
 {% block content %}
-    <div class="container border-b-2 p-2">
-        <a href="/" type="button" class="btn-create">BACK TO SCHEDULES</a>
-        <h3 class="text-gray-600">Delete Schedule</h3>
+    <div class="container p-2">
+        <h3 class="text-3xl text-gray-700 font-medium">Delete Schedule</h3>
     </div>
-    <form action="." method="POST">
-        {% csrf_token %}
-        <p>
-            Are you sure you want to remove schedule <b>{{ object.name }}</b> ?
-        </p>
-        <p class="text-red-800">All jobs associated with this schedule will be removed.</p>
-        <button type="submit" class="btn btn-danger">Confirm</button>
-    </form>
+    <div class="max-w-2xl p-2">
+        <form action="." method="POST">
+            {% csrf_token %}
+            <p>
+                Are you sure you want to remove schedule <b>{{ object.name }}</b> ?
+            </p>
+            <p class="text-red-800">All jobs associated with this schedule will be removed.</p>
+            <button type="submit" class="btn btn-danger mt-3">Confirm</button>
+        </form>
+    </div>
 {% endblock %}

@@ -1,15 +1,16 @@
-{% extends 'core/base.html' %}
+{% extends 'core/base2.html' %}
 {% load widget_tweaks %}
 {% block content %}
-    <div class="container border-b-2 p-2">
-        <a href="{% url 'node-list' %}" type="button" class="btn-create">BACK TO NODES</a>
-        <h3 class="text-gray-600">Remove Node</h3>
+    <div class="container p-2">
+        <h3 class="text-3xl text-gray-700 font-medium">Remove Node</h3>
     </div>
-    <form action="." method="post">
-        {% csrf_token %}
-        <p>
-            Remove node <b>{{ object.name }}</b>
-        </p>
-        <button type="submit" class="btn btn-danger">Confirm</button>
-    </form>
+    <div class="max-w-2xl p-2">
+        <form action="." method="post">
+            {% csrf_token %}
+            <p>
+                Are you sure you want to remove node <b>{{ object.name }}</b> ?
+            </p>
+            <button type="submit" class="btn btn-danger mt-2">Confirm</button>
+        </form>
+    </div>
 {% endblock %}
