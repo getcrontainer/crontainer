@@ -1,4 +1,5 @@
 {% load static %}
+{% load describe_cron %}
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -63,13 +64,6 @@
                                        placeholder="Search" />
                             </div>
                         </form>
-                        <!--
-                   <div class="text-lg font-bold text-gray-500">
-                       <a href="{% url 'schedule-list' %}" class="ms-8 me-4 text-gray-900">Schedule</a>
-                       <a href="{% url 'job-list' %}" class="me-4">Jobs</a>
-                       <span class="me-4">Credentials</span>
-                       <span class="me-4">Nodes</span>
-</div>-->
                     </div>
                     <div class="flex items-center lg:order-3">
                         <button type="button"
@@ -87,22 +81,7 @@
                                 </path>
                             </svg>
                         </button>
-                        <!-- Apps -->
-                        <button type="button"
-                                data-dropdown-toggle="apps-dropdown"
-                                class="p-2 text-gray-500 rounded-lg hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-700 focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
-                            <span class="sr-only">View notifications</span>
-                            <!-- Icon -->
-                            <svg class="w-6 h-6"
-                                 fill="currentColor"
-                                 viewBox="0 0 20 20"
-                                 xmlns="http://www.w3.org/2000/svg">
-                                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z">
-                                </path>
-                            </svg>
-                        </button>
-                        <!-- Dropdown menu -->
-                        <div class="hidden overflow-hidden z-50 my-4 max-w-sm text-base list-none bg-white rounded divide-y divide-gray-100 shadow-lg dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
+                        <div class="hidden overflow-hidden z-50 my-4 max-w-sm text-base list-none bg-white divide-y divide-gray-100 shadow-lg dark:bg-gray-700 dark:divide-gray-600 rounded-xl"
                              id="apps-dropdown">
                             <div class="block py-2 px-4 text-base font-medium text-center text-gray-700 bg-gray-50 dark:bg-gray-600 dark:text-gray-300">
                                 Apps
@@ -316,7 +295,7 @@
             <aside class="fixed top-0 left-0 z-40 w-64 h-screen pt-14 transition-transform -translate-x-full bg-gray-100 border-r border-gray-100 md:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
                    aria-label="Sidenav"
                    id="drawer-navigation">
-                <div class="overflow-y-auto py-5 px-3 h-full bg-gray-100 dark:bg-gray-800">
+                <div class="overflow-y-auto py-5 px-4 h-full bg-gray-100 dark:bg-gray-800">
                     <form action="#" method="GET" class="md:hidden mb-2">
                         <label for="sidebar-search" class="sr-only">Search</label>
                         <div class="relative">
@@ -342,7 +321,7 @@
                                class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700 group">
                                 <span class="mdi mdi-calendar-arrow-right text-xl"></span>
                                 <span class="ml-3">Schedules</span>
-                                <div class="w-full text-right text-gray-400">9</div>
+                                <div class="w-full text-right text-gray-400">{% resource_count "schedule" %}</div>
                             </a>
                         </li>
                         <li>
@@ -350,7 +329,7 @@
                                class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-300 dark:hover:bg-gray-700 group">
                                 <span class="mdi mdi-run-fast text-xl"></span>
                                 <span class="ml-3">Jobs</span>
-                                <div class="w-full text-right text-gray-400">2745604</div>
+                                <div class="w-full text-right text-gray-400">{% resource_count "job" %}</div>
                             </a>
                         </li>
                         <li>
@@ -358,7 +337,7 @@
                                class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 group">
                                 <span class="mdi mdi-key-chain text-xl"></span>
                                 <span class="ml-3">Credentials</span>
-                                <div class="w-full text-right text-gray-400">2</div>
+                                <div class="w-full text-right text-gray-400">{% resource_count "credential" %}</div>
                             </a>
                         </li>
                         <li>
@@ -366,7 +345,7 @@
                                class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700 group">
                                 <span class="mdi mdi-desktop-tower text-xl"></span>
                                 <span class="ml-3">Nodes</span>
-                                <div class="w-full text-right text-gray-400">4</div>
+                                <div class="w-full text-right text-gray-400">{% resource_count "node" %}</div>
                             </a>
                         </li>
                     </ul>
