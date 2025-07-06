@@ -31,6 +31,9 @@ class ScheduleCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
+        self.object.created_by = self.request.user
+        self.object.save()
+
         schedule_id = str(self.object.id)
         cmd = settings.CRONJOB_CMD.format(schedule_id=schedule_id, cron_rule=self.object.cron_rule)
         crontab_path = settings.CRONTAB_PATH / f"ct_{schedule_id}"

@@ -3,10 +3,12 @@ import uuid
 import dateutil
 from cron_descriptor import ExpressionDescriptor, FormatException, MissingFieldException
 from cron_descriptor import Options as CronOptions
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import PROTECT
 from django.utils import timezone
 
+User = get_user_model()
 cron_options = CronOptions()
 
 cron_options.verbose = True
@@ -54,7 +56,7 @@ class Schedule(models.Model):
     name = models.SlugField(max_length=500)
     cmd = models.CharField(blank=True, max_length=500, help_text="Command to execute")
     parameters = models.CharField(blank=True, max_length=500)
-    created_by = models.EmailField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     cron_rule = models.CharField(max_length=25)
     cron_rule_hash = models.CharField(max_length=200, blank=True, db_index=True)

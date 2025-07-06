@@ -3,7 +3,7 @@
   fields:
     name: "[build-error-test] :: invalid branch"
     parameters: ''
-    created_by: ''
+    created_by: null
     created_at: 2024-07-20 15:53:00.973476+00:00
     cron_rule: '* * * * *'
     cron_rule_hash: ''
@@ -21,7 +21,7 @@
   fields:
     name: "hello-world"
     parameters: ''
-    created_by: ''
+    created_by: null
     created_at: 2024-07-20 15:53:00.973476+00:00
     cron_rule: '* * * * *'
     cron_rule_hash: ''
@@ -39,7 +39,7 @@
   fields:
     name: "[pull-error-test] :: non existent repository"
     parameters: ''
-    created_by: ''
+    created_by: null
     created_at: 2024-07-28 16:12:52.346991+00:00
     cron_rule: '* * * * *'
     cron_rule_hash: ''
@@ -57,7 +57,7 @@
   fields:
     name: "[run-success-test] :: public ghcr"
     parameters: ''
-    created_by: ''
+    created_by: null
     created_at: 2024-07-20 13:23:09.635220+00:00
     cron_rule: '* * * * *'
     cron_rule_hash: ''
@@ -83,7 +83,7 @@
   fields:
     name: "[run-success-test] :: private ghcr"
     parameters: ''
-    created_by: ''
+    created_by: null
     created_at: 2024-07-20 13:23:09.635220+00:00
     cron_rule: '* * * * *'
     cron_rule_hash: ''
@@ -101,7 +101,7 @@
   fields:
     name: "[run-error-test] :: command don´t exist in image"
     parameters: '/usr/bin/non-existent-binary'
-    created_by: ''
+    created_by: null
     created_at: 2024-07-20 13:23:09.635220+00:00
     cron_rule: '* * * * *'
     cron_rule_hash: ''
