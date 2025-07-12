@@ -34,4 +34,8 @@
     .btn-disabled {
         @apply text-gray-400 bg-gray-200 cursor-not-allowed;
     }
+
+    .default-table-row {
+        @apply bg-white dark:bg-gray-800 dark:border-gray-700 hover:bg-orange-100 dark:hover:bg-gray-600
+    }
 }
