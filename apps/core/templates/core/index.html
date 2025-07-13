@@ -1,15 +1,9 @@
 {% extends 'core/base2.html' %}
 {% block content %}
-    <div class="fixed end-6 bottom-6 group">
-        <a href="/create"
-           class="btn-primary rounded-full w-14 h-14 items-center justify-center flex px-0 py-0">
-            <span class="mdi mdi-plus text-3xl"></span>
-        </a>
-    </div>
     <div class="container p-2">
         <h3 class="text-3xl text-gray-600 font-bold">Schedules</h3>
     </div>
-    <div class="not-format mt-4 relative overflow-x-auto rounded-lg">
+    <div class="not-format mt-4 relative overflow-x-auto rounded-lg mb-12">
         <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
             <thead class="text-sm font-bold uppercase text-gray-400">
                 <tr>
@@ -97,5 +91,11 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+    <div class="fixed end-6 bottom-6 group">
+        <a href="/create"
+           class="btn-primary rounded-full w-14 h-14 items-center justify-center flex px-0 py-0">
+            <span class="mdi mdi-plus text-3xl"></span>
+        </a>
     </div>
 {% endblock %}
