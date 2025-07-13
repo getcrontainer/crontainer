@@ -2554,6 +2554,10 @@ input:checked + .toggle-bg {
   width: 50%;
 }
 
+.w-10 {
+  width: 2.5rem;
+}
+
 .w-14 {
   width: 3.5rem;
 }
@@ -2596,10 +2600,6 @@ input:checked + .toggle-bg {
 
 .w-full {
   width: 100%;
-}
-
-.w-10 {
-  width: 2.5rem;
 }
 
 .max-w-2xl {
@@ -3094,10 +3094,6 @@ input:checked + .toggle-bg {
   padding-left: 0.75rem;
 }
 
-.ps-3 {
-  padding-inline-start: 0.75rem;
-}
-
 .pt-10 {
   padding-top: 2.5rem;
 }
@@ -3378,11 +3374,6 @@ input:checked + .toggle-bg {
 .hover\:bg-gray-300:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(209 213 219 / var(--tw-bg-opacity, 1));
-}
-
-.hover\:bg-orange-100:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(255 237 213 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:bg-primary-700:hover {
