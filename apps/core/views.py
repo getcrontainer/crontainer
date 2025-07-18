@@ -3,6 +3,7 @@ import os
 import cron_descriptor
 from django import forms
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.urls import reverse_lazy
@@ -17,6 +18,8 @@ from django.views.generic import (
 
 from apps.core.forms import ScheduleCreateForm, ScheduleUpdateForm
 from apps.core.models import Credential, Job, Schedule
+
+User = get_user_model()
 
 
 class ScheduleListView(LoginRequiredMixin, ListView):
@@ -144,3 +147,24 @@ class DescribeCronView(LoginRequiredMixin, View):
         except (cron_descriptor.FormatException, cron_descriptor.Exception.MissingFieldException):
             return HttpResponse("Invalid cron expression")
         return HttpResponse(description)
+
+
+class UserListView(LoginRequiredMixin, ListView):
+    model = User
+
+
+class UserCreateView(LoginRequiredMixin, CreateView):
+    model = User
+    fields = ["username", "email", "first_name", "last_name"]
+    success_url = reverse_lazy("user-list")
+
+
+class UserUpdateView(LoginRequiredMixin, UpdateView):
+    model = User
+    fields = ["username", "email", "first_name", "last_name"]
+    success_url = reverse_lazy("user-list")
+
+
+class UserDeleteView(LoginRequiredMixin, DeleteView):
+    model = User
+    success_url = reverse_lazy("user-list")

@@ -1,0 +1,51 @@
+{% extends 'core/base2.html' %}
+{% block content %}
+    <div class="container p-2">
+        <h3 class="text-3xl text-gray-600 font-bold">Users</h3>
+    </div>
+    <div class="not-format mt-4 relative overflow-x-auto rounded-lg">
+        <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+            <thead class="text-sm font-bold uppercase text-gray-400">
+                <tr>
+                    <th scope="col" class="px-6 py-3">Name/Email</th>
+                    <th scope="col" class="px-6 py-3">Username</th>
+                    <th scope="col" class="px-6 py-3">Joined at</th>
+                    <th scope="col" class="px-6 py-3">Last login</th>
+                    <th scope="col" class="px-6 py-3">Admin</th>
+                    <th scope="col" class="px-6 py-3">Action</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-700">
+                {% for object in object_list %}
+                    <tr class="default-table-row">
+                        <td class="px-6 py-4 text-gray-900 dark:text-white rounded-s-xl">
+                            {{ object.get_full_name }}
+                            <br />
+                            <small>{{ object.email }}</small>
+                        </td>
+                        <td class="px-6 py-4">{{ object.username }}</td>
+                        <td class="px-6 py-4">{{ object.date_joined }}</td>
+                        <td class="px-6 py-4">{{ object.last_login }}</td>
+                        <td class="px-6 py-4">
+                            {% if object.is_superuser %}<span class="mdi mdi-check text-xl text-green-600"></span>{% endif %}
+                        </td>
+                        <td class="px-6 py-4 rounded-e-xl">
+                            <a href="{% url 'user-delete' object.id %}" class="btn-mini-remove">
+                                <span class="mdi mdi-trash-can-outline mdi-18px"></span>
+                            </a>
+                            <a href="{% url 'user-update' object.id %}" class="btn-mini-edit">
+                                <span class="mdi mdi-pencil mdi-18px"></span>
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="fixed end-6 bottom-6 group">
+        <a href="{% url 'user-create' %}"
+           class="btn-primary rounded-full w-14 h-14 items-center justify-center flex px-0 py-0">
+            <span class="mdi mdi-plus text-3xl"></span>
+        </a>
+    </div>
+{% endblock %}

@@ -27,6 +27,6 @@ def create_superuser_on_startup() -> None:
 
     if all((admin_username, admin_password)):
         User = get_user_model()  # pylint: disable=invalid-name
-        admin, _ = User.objects.get_or_create(username=admin_username)
+        admin, _ = User.objects.get_or_create(username=admin_username, is_superuser=True)
         admin.set_password(admin_password)
         admin.save()

@@ -33,6 +33,10 @@ from apps.core.views import (
     ScheduleDeleteView,
     ScheduleListView,
     ScheduleUpdateView,
+    UserCreateView,
+    UserDeleteView,
+    UserListView,
+    UserUpdateView,
 )
 
 urlpatterns = [
@@ -50,6 +54,10 @@ urlpatterns = [
     path("describe_cron/", DescribeCronView.as_view(), name="describe_cron"),
     path("node/", include("apps.node.urls")),
     path("login/", LoginView.as_view(), name="login"),
+    path("account/user/", UserListView.as_view(), name="user-list"),
+    path("account/user/create/", UserCreateView.as_view(), name="user-create"),
+    path("account/user/update/<int:pk>/", UserUpdateView.as_view(), name="user-update"),
+    path("account/user/delete/<int:pk>/", UserDeleteView.as_view(), name="user-delete"),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
