@@ -43,10 +43,13 @@
                         <td class="px-6 py-4">{{ job.duration }}s</td>
                         <td class="px-6 py-4">
                             {% if job.log %}
-                                <a href="{% url 'job-log' job.id %}"
-                                   class="font-medium text-blue-600 dark:text-blue-500 hover:underline">log</a>
+                                <a href="{% url 'job-log' job.id %}" class="btn-mini-edit" disabled>
+                                    <span class="mdi mdi-math-log mdi-18px"></span>
+                                </a>
                             {% else %}
-                                <span class="text-gray-500">log</span>
+                                <div class="btn-mini-edit bg-gray-100">
+                                    <span class="mdi mdi-math-log mdi-18px text-gray-500"></span>
+                                </div>
                             {% endif %}
                         </td>
                     </tr>
