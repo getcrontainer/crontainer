@@ -87,13 +87,13 @@ class CredentialListView(LoginRequiredMixin, ListView):
 
 class CredentialCreateView(LoginRequiredMixin, CreateView):
     model = Credential
-    success_url = reverse_lazy("credential-list")
     fields = ["name", "username", "password", "category"]
+    success_url = reverse_lazy("credential-list")
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         category = self.request.GET.get("category") or self.request.POST.get("category")
-
+        form.fields["password"].widget = forms.PasswordInput()
         if category == "3":  # AWS
             form.fields["username"].required = True
             form.fields["password"].required = True
@@ -104,8 +104,17 @@ class CredentialCreateView(LoginRequiredMixin, CreateView):
 class CredentialUpdateView(LoginRequiredMixin, UpdateView):
     model = Credential
     fields = ["name", "username", "password", "category"]
-
     success_url = reverse_lazy("credential-list")
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        category = self.request.GET.get("category") or self.request.POST.get("category")
+        form.fields["password"].widget = forms.PasswordInput()
+        if category == "3":  # AWS
+            form.fields["username"].required = True
+            form.fields["password"].required = True
+
+        return form
 
 
 class CredentialDeleteView(LoginRequiredMixin, DeleteView):

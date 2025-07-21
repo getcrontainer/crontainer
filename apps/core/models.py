@@ -35,7 +35,7 @@ class Credential(models.Model):
     )
     username = models.CharField(max_length=100, blank=True)
     password = models.CharField(max_length=100)
-    category = models.IntegerField(choices=CategoryChoices, default=1, blank=True)
+    category = models.IntegerField(choices=CategoryChoices.choices, default=1, blank=True)
 
     def __str__(self):
         return str(self.name)
