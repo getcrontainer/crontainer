@@ -1,3 +1,5 @@
+import re
+
 import cron_descriptor
 from cron_descriptor import get_description
 from django import forms
@@ -5,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 
 from apps.core.models import Schedule
+
+env_var_key_regex = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 class ScheduleCreateForm(forms.ModelForm):
@@ -48,8 +52,12 @@ class ScheduleCreateForm(forms.ModelForm):
         keys = self.data.getlist("env_vars_keys")
         values = self.data.getlist("env_vars_values")
 
-        if len(keys) != len(values):
-            raise ValidationError("Keys and values must have the same length")
+        for key, value in zip(keys, values):
+            if not value:
+                raise ValidationError(f"Value for environment variable '{key}' is required")
+
+            if not env_var_key_regex.match(key):
+                raise ValidationError(f"Invalid environment variable key: '{key}'")
 
         return dict(zip(keys, values))
 
@@ -94,7 +102,11 @@ class ScheduleUpdateForm(forms.ModelForm):
         keys = self.data.getlist("env_vars_keys")
         values = self.data.getlist("env_vars_values")
 
-        if len(keys) != len(values):
-            raise ValidationError("Keys and values must have the same length")
+        for key, value in zip(keys, values):
+            if not value:
+                raise ValidationError(f"Value for environment variable '{key}' is required")
+
+            if not env_var_key_regex.match(key):
+                raise ValidationError(f"Invalid environment variable key: '{key}'")
 
         return dict(zip(keys, values))
