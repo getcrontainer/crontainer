@@ -61,7 +61,7 @@ urlpatterns = [
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
-if settings.DEBUG:
+if settings.DEBUG == 3:
     from debug_toolbar.toolbar import debug_toolbar_urls
 
     urlpatterns += debug_toolbar_urls()
