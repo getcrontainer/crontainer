@@ -142,7 +142,7 @@ CRONTAB_PATH = Path(env("CRONTAB_PATH"))
 CRONJOB_CMD = env("CRONJOB_CMD")
 
 # Debug toolbar settings
-if DEBUG:
+if DEBUG == 3:
     INSTALLED_APPS += ["debug_toolbar"]
     # Middleware should be placed right after anything that encodes the response's content
     # (in this case, WhiteNoise)
