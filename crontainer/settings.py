@@ -35,6 +35,7 @@ SECRET_KEY = "django-insecure-t(=_djgy021(tvq%doh+u(v*#lz0zx8lc6i93!u5hfo$ce!z2b
 DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+CSRF_TRUSTED_ORIGINS = env("ALLOWED_HOSTS")
 
 # Application definition
 
