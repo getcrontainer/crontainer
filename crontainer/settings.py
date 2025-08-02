@@ -20,6 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["*"]),
+    TRUSTED_ORIGINS=(list, []),
     CRONJOB_CMD=(str, "{cron_rule}\troot\tcd /app && python3 /app/manage.py run_schedule {schedule_id}"),
     CRONTAB_PATH=(str, "/tmp/cron.d"),
 )
@@ -35,7 +36,7 @@ SECRET_KEY = "django-insecure-t(=_djgy021(tvq%doh+u(v*#lz0zx8lc6i93!u5hfo$ce!z2b
 DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
-CSRF_TRUSTED_ORIGINS = env("ALLOWED_HOSTS")
+CSRF_TRUSTED_ORIGINS = env("TRUSTED_ORIGINS")
 
 # Application definition
 
