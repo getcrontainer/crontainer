@@ -3,3 +3,4 @@ node_modules
 cron.d
 .*
 data/db.sqlite3
+data/
