@@ -81,7 +81,7 @@ WSGI_APPLICATION = "crontainer.wsgi.application"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    "default": env.db(default="sqlite:///db.sqlite3"),
+    "default": env.db(default="sqlite:///data/db.sqlite3"),
 }
 
 # Password validation

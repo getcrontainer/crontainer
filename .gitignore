@@ -165,3 +165,4 @@ cron.d/*
 .junie/
 settings.toml
 staticfiles/
+data/
