@@ -2636,6 +2636,10 @@ input:checked + .toggle-bg {
   width: 0.875rem;
 }
 
+.w-36 {
+  width: 9rem;
+}
+
 .w-4 {
   width: 1rem;
 }
@@ -2662,26 +2666,6 @@ input:checked + .toggle-bg {
 
 .w-full {
   width: 100%;
-}
-
-.w-12 {
-  width: 3rem;
-}
-
-.w-16 {
-  width: 4rem;
-}
-
-.w-40 {
-  width: 10rem;
-}
-
-.w-32 {
-  width: 8rem;
-}
-
-.w-36 {
-  width: 9rem;
 }
 
 .max-w-2xl {
@@ -3263,10 +3247,6 @@ input:checked + .toggle-bg {
   font-weight: 500;
 }
 
-.font-normal {
-  font-weight: 400;
-}
-
 .font-semibold {
   font-weight: 600;
 }
@@ -3501,10 +3481,6 @@ input:checked + .toggle-bg {
 .hover\:text-gray-900:hover {
   --tw-text-opacity: 1;
   color: rgb(17 24 39 / var(--tw-text-opacity, 1));
-}
-
-.hover\:underline:hover {
-  text-decoration-line: underline;
 }
 
 .focus\:border-primary-500:focus {

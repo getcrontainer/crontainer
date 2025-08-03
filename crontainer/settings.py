@@ -22,6 +22,7 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, ["*"]),
     CRONJOB_CMD=(str, "{cron_rule}\troot\tcd /app && python3 /app/manage.py run_schedule {schedule_id}"),
     CRONTAB_PATH=(str, "/tmp/cron.d"),
+    CSRF_TRUSTED_ORIGINS=(list, []),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
@@ -35,6 +36,7 @@ SECRET_KEY = "django-insecure-t(=_djgy021(tvq%doh+u(v*#lz0zx8lc6i93!u5hfo$ce!z2b
 DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
 # Application definition
 
