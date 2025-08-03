@@ -1,3 +1,5 @@
+import time
+
 import docker
 from django.core.management.base import BaseCommand
 
@@ -18,23 +20,26 @@ class Command(BaseCommand):
         return container
 
     def handle(self, *args, **options):
-        for job in Job.objects.filter(status_code__isnull=True, provisioning=False):
-            self.stdout.write(self.style.WARNING(f"{job.schedule.id} - {job.id} - processing job"))
-            container = self._check_container(job)
-            if container:
-                job.state = container.attrs["State"]
-                job.status = container.status
-                job.save()
-
-                if container.status == "exited":
-                    self.stdout.write(
-                        self.style.SUCCESS(f"{job.schedule.id} - {job.id} - finished job, removing container...")
-                    )
-                    job.log = container.logs().decode("utf-8")
-                    job.status_code = container.wait()["StatusCode"]
+        while True:
+            self.stdout.write(self.style.SUCCESS("Checking for jobs to update..."))
+            for job in Job.objects.filter(status_code__isnull=True, provisioning=False):
+                self.stdout.write(self.style.WARNING(f"{job.schedule.id} - {job.id} - processing job"))
+                container = self._check_container(job)
+                if container:
+                    job.state = container.attrs["State"]
+                    job.status = container.status
                     job.save()
-                    container.remove()
+
+                    if container.status == "exited":
+                        self.stdout.write(
+                            self.style.SUCCESS(f"{job.schedule.id} - {job.id} - finished job, removing container...")
+                        )
+                        job.log = container.logs().decode("utf-8")
+                        job.status_code = container.wait()["StatusCode"]
+                        job.save()
+                        container.remove()
+                    else:
+                        self.stdout.write(self.style.WARNING(f"{job.schedule.id} - {job.id} - still running..."))
                 else:
-                    self.stdout.write(self.style.WARNING(f"{job.schedule.id} - {job.id} - still running..."))
-            else:
-                self.stdout.write(self.style.ERROR(f"{job.schedule.id} - {job.id} - can't find container"))
+                    self.stdout.write(self.style.ERROR(f"{job.schedule.id} - {job.id} - can't find container"))
+            time.sleep(60)
