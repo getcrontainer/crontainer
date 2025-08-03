@@ -23,18 +23,12 @@ env = environ.Env(
     CRONJOB_CMD=(str, "{cron_rule}\troot\tcd /app && python3 /app/manage.py run_schedule {schedule_id}"),
     CRONTAB_PATH=(str, "/tmp/cron.d"),
     CSRF_TRUSTED_ORIGINS=(list, []),
+    SESSION_KEY=(str, "django-insecure-t(=_djgy021(tvq%doh+u(v*#lz0zx8lc6i93!u5hfo$ce!z2b"),
 )
 environ.Env.read_env(BASE_DIR / ".env")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-t(=_djgy021(tvq%doh+u(v*#lz0zx8lc6i93!u5hfo$ce!z2b"
-
-# SECURITY WARNING: don't run with debug turned on in production!
+SECRET_KEY = env("SESSION_KEY")
 DEBUG = env("DEBUG")
-
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
