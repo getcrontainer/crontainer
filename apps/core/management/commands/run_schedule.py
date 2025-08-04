@@ -55,7 +55,7 @@ class Command(BaseCommand):
         #
         self.job = Job.objects.create(schedule_id=schedule_id, provisioning=True)
 
-        if self.schedule.image.lower().startswith(("http://", "https://")):
+        if self.schedule.image.lower().startswith(("http://", "https://", "git@")):
             self.build_image()
         else:
             self.pull_image()
@@ -68,7 +68,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING(f"[{self.schedule.id}] building image {self.schedule.image}"))
         try:
             _image, build_log = client.images.build(
-                path=self.schedule.image + "#main", tag=f"{self.schedule.id}:latest"
+                path=self.schedule.image, tag=f"{self.schedule.id}:latest"
             )
             for step in build_log:
                 assert step
