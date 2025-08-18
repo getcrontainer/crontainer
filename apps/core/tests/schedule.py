@@ -153,3 +153,116 @@ class TestScheduleListView(TestCase):
         self.assertIn(schedule, view.object_list)
 
         self.assertEqual(view.object_list.count(), 1)
+
+
+class TestScheduleEnvVars(TestCase):
+    def test_key_starts_with_number(self):
+        response = self.client.post(
+            "/create/",
+            {
+                "name": "test",
+                "cron_rule": "0 0 * * *",
+                "image": "test",
+                "env_vars_keys": ["1key"],
+                "env_vars_values": ["value"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "core/schedule_form.html")
+
+        view = EasyResponse(response)
+
+        self.assertEqual(
+            view.form.errors,
+            {
+                "env_vars": ["Invalid environment variable key: '1key'"],
+            },
+        )
+
+    def test_key_invalid_characters(self):
+        response = self.client.post(
+            "/create/",
+            {
+                "name": "test",
+                "cron_rule": "0 0 * * *",
+                "image": "test",
+                "env_vars_keys": ["key!"],
+                "env_vars_values": ["value"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "core/schedule_form.html")
+
+        view = EasyResponse(response)
+
+        self.assertEqual(
+            view.form.errors,
+            {
+                "env_vars": ["Invalid environment variable key: 'key!'"],
+            },
+        )
+
+    def test_key_empty(self):
+        response = self.client.post(
+            "/create/",
+            {
+                "name": "test",
+                "cron_rule": "0 0 * * *",
+                "image": "test",
+                "env_vars_keys": [""],
+                "env_vars_values": ["value"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "core/schedule_form.html")
+
+        view = EasyResponse(response)
+
+        self.assertEqual(
+            view.form.errors,
+            {
+                "env_vars": ["Invalid environment variable key: ''"],
+            },
+        )
+
+    def test_value_empty(self):
+        response = self.client.post(
+            "/create/",
+            {
+                "name": "test",
+                "cron_rule": "0 0 * * *",
+                "image": "test",
+                "env_vars_keys": ["key"],
+                "env_vars_values": [""],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "core/schedule_form.html")
+
+        view = EasyResponse(response)
+
+        self.assertEqual(
+            view.form.errors,
+            {
+                "env_vars": ["Value for environment variable 'key' is required"],
+            },
+        )
+
+    def test_valid(self):
+        response = self.client.post(
+            "/create/",
+            {
+                "name": "test",
+                "cron_rule": "0 0 * * *",
+                "image": "test",
+                "env_vars_keys": ["key"],
+                "env_vars_values": ["value"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, "/")
