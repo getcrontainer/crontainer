@@ -44,6 +44,7 @@ const credentialProviders = [
   [98, "Generic Git", GitFork],
   [3, "AWS ECR", Cloud],
 ];
+const cronFieldLabels = ["Minute", "Hour", "Day", "Month", "Weekday"];
 const listRouteNames = { schedules: "schedules", jobs: "jobs", credentials: "credentials", nodes: "nodes", users: "users" };
 
 const route = useRoute();
@@ -56,6 +57,7 @@ const userMenuOpen = ref(false);
 const loginForm = reactive({ username: "", password: "" });
 const editing = reactive({ schedules: null, credentials: null, users: null, nodes: null });
 const scheduleForm = reactive(emptySchedule());
+const cronRuleParts = ref(scheduleForm.cron_rule.split(" "));
 const credentialForm = reactive(emptyCredential());
 const userForm = reactive(emptyUser());
 const nodeForm = reactive(emptyNode());
@@ -78,7 +80,11 @@ function emptyNode() { return { name: "", host: "", port: 2375, use_ssh: false, 
 function replace(target, source) { Object.assign(target, source); }
 function resetForm(resource) {
   editing[resource] = null;
-  if (resource === "schedules") { replace(scheduleForm, emptySchedule()); envRows.value = []; }
+  if (resource === "schedules") {
+    replace(scheduleForm, emptySchedule());
+    setCronRuleParts(scheduleForm.cron_rule);
+    envRows.value = [];
+  }
   if (resource === "credentials") replace(credentialForm, emptyCredential());
   if (resource === "users") replace(userForm, emptyUser());
   if (resource === "nodes") replace(nodeForm, emptyNode());
@@ -111,6 +117,16 @@ function sourceIcon(sourceName) {
 }
 function credentialScheduleCount(credentialId) { return collections.value.schedules.filter((schedule) => schedule.credential === credentialId).length; }
 
+function setCronRuleParts(cronRule) {
+  const parts = String(cronRule || "").trim().split(/\s+/).slice(0, cronFieldLabels.length);
+  cronRuleParts.value = cronFieldLabels.map((_, index) => parts[index] || "");
+}
+
+function updateCronRulePart(index, value) {
+  cronRuleParts.value[index] = value.replace(/\s/g, "");
+  scheduleForm.cron_rule = cronRuleParts.value.join(" ");
+}
+
 function queueCronDescription(cronRule, enabled) {
   window.clearTimeout(cronDescriptionTimer);
   const requestId = ++cronDescriptionRequest;
@@ -139,6 +155,7 @@ function populateForm(resource, item) {
   editing[resource] = item;
   if (resource === "schedules") {
     replace(scheduleForm, { ...emptySchedule(), ...item });
+    setCronRuleParts(scheduleForm.cron_rule);
     envRows.value = Object.entries(item.env_vars || {}).map(([key, value]) => ({ key, value }));
   } else if (resource === "credentials") {
     replace(credentialForm, { ...emptyCredential(), ...item, password: "" });
@@ -353,9 +370,22 @@ onBeforeUnmount(() => {
               <input v-model="scheduleForm.name" class="form-control" required />
             </div>
             <div>
-              <label class="form-label">Cron rule</label>
-              <input v-model="scheduleForm.cron_rule" class="form-control" required aria-describedby="cron-rule-help cron-rule-description" />
-              <span id="cron-rule-help" class="form-help">Use a five-part cron expression.</span>
+              <fieldset aria-describedby="cron-rule-description">
+                <legend class="form-label">Cron rule</legend>
+                <div class="grid grid-cols-5 gap-2">
+                  <label v-for="(label, index) in cronFieldLabels" :key="label" class="min-w-0">
+                    <span class="mb-1 block text-xs font-normal text-gray-600">{{ label }}</span>
+                    <input
+                      :value="cronRuleParts[index]"
+                      class="form-control text-center"
+                      required
+                      autocomplete="off"
+                      spellcheck="false"
+                      @input="updateCronRulePart(index, $event.target.value)"
+                    />
+                  </label>
+                </div>
+              </fieldset>
               <span id="cron-rule-description" class="form-help min-h-6" aria-live="polite">
                 <span v-if="describingCron">Describing…</span>
                 <span v-else-if="cronDescriptionError" class="text-red-600">{{ cronDescriptionError }}</span>
