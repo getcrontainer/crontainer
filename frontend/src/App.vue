@@ -54,6 +54,8 @@ const { currentUser, loading, error, notice, collections } = storeToRefs(appStor
 const activeTab = computed(() => route.meta.resource || "schedules");
 const mobileSidebarOpen = ref(false);
 const userMenuOpen = ref(false);
+const searchQuery = ref("");
+const searchInput = ref(null);
 const loginForm = reactive({ username: "", password: "" });
 const editing = reactive({ schedules: null, credentials: null, users: null, nodes: null });
 const scheduleForm = reactive(emptySchedule());
@@ -70,6 +72,30 @@ const deleting = ref(false);
 const deleteError = ref("");
 let cronDescriptionTimer;
 let cronDescriptionRequest = 0;
+
+const activeSchedules = computed(() => collections.value.schedules.filter((schedule) => schedule.active).length);
+const healthyJobs = computed(() => collections.value.jobs.filter((job) => {
+  const status = String(job.status || "").toLowerCase();
+  return status.includes("success") || status.includes("complete") || Number(job.status_code) === 0;
+}).length);
+const sshNodes = computed(() => collections.value.nodes.filter((node) => node.use_ssh).length);
+const adminUsers = computed(() => collections.value.users.filter((user) => user.is_superuser).length);
+const userInitials = computed(() => {
+  const user = currentUser.value;
+  if (!user) return "CT";
+  const parts = [user.first_name, user.last_name].filter(Boolean);
+  const source = parts.length ? parts : [user.username];
+  return source.map((part) => part?.[0]).filter(Boolean).join("").slice(0, 2).toUpperCase();
+});
+const visibleCollections = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  if (!query) return collections.value;
+
+  return Object.fromEntries(Object.entries(collections.value).map(([resource, items]) => [
+    resource,
+    items.filter((item) => Object.values(item).some((value) => String(value ?? "").toLowerCase().includes(query))),
+  ]));
+});
 
 function emptySchedule() {
   return { name: "", image: "", cmd: "", parameters: "", cron_rule: "0 0 * * *", active: true, singleton: false, credential: null, cpu: null, memory: null };
@@ -235,6 +261,11 @@ async function confirmDelete() {
   }
 }
 function handleEscape(event) {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    searchInput.value?.focus();
+    return;
+  }
   if (event.key !== "Escape") return;
   if (deleteRequest.value) {
     closeDeleteConfirmation();
@@ -257,6 +288,7 @@ async function initialise() {
 watch(() => route.fullPath, () => {
   mobileSidebarOpen.value = false;
   userMenuOpen.value = false;
+  searchQuery.value = "";
   if (currentUser.value) syncRouteForm();
 });
 
@@ -278,63 +310,93 @@ onBeforeUnmount(() => {
 
 <template>
   <main v-if="!loading">
-    <section v-if="!currentUser" class="bg-amber-100 min-h-screen">
-      <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto min-h-screen lg:py-0">
-        <div class="flex items-center mb-6 text-2xl font-semibold text-gray-900">Cr<Clock3 class="mx-0.5" :size="24" aria-hidden="true" />ntainer</div>
-        <div class="w-full bg-white rounded-lg shadow sm:max-w-md xl:p-0">
-          <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
-            <h1 class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">Sign in to your account</h1>
-            <p v-if="error" class="text-red-400">{{ error }}</p>
-            <form class="space-y-4 md:space-y-6" @submit.prevent="authenticate">
-              <div><label class="block mb-2 text-sm font-medium text-gray-900">Username</label><input v-model="loginForm.username" autocomplete="username" required class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5" /></div>
-              <div><label class="block mb-2 text-sm font-medium text-gray-900">Password</label><input v-model="loginForm.password" type="password" autocomplete="current-password" required class="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5" /></div>
-              <button type="submit" class="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Sign in</button>
-            </form>
+    <section v-if="!currentUser" class="login-shell">
+      <div class="login-atmosphere" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="login-hero">
+        <div class="login-brand brand-lockup"><span class="brand-icon"><Clock3 :size="22" aria-hidden="true" /></span><span>Crontainer</span></div>
+        <div class="login-pitch">
+          <p class="eyebrow">Container orchestration, distilled.</p>
+          <h1>Set it once.<br />Let it run.</h1>
+          <p>Quietly dependable scheduling for the infrastructure that keeps your work moving.</p>
+        </div>
+        <div class="login-proof"><span class="status-dot"></span><span>All systems ready</span></div>
+      </div>
+      <div class="login-panel">
+        <div class="login-card">
+          <div class="login-card-heading">
+            <p class="eyebrow">Welcome back</p>
+            <h2>Sign in to Crontainer</h2>
+            <p>Manage schedules, jobs and infrastructure from one focused workspace.</p>
           </div>
+          <p v-if="error" class="alert alert-error">{{ error }}</p>
+          <form class="login-form" @submit.prevent="authenticate">
+            <label class="login-field"><span>Username</span><input v-model="loginForm.username" autocomplete="username" required placeholder="Enter your username" /></label>
+            <label class="login-field"><span>Password</span><input v-model="loginForm.password" type="password" autocomplete="current-password" required placeholder="Enter your password" /></label>
+            <button type="submit" class="login-submit">Continue <span aria-hidden="true">→</span></button>
+          </form>
+          <p class="login-footnote"><LockKeyhole :size="14" aria-hidden="true" /> Secured by your private Crontainer instance</p>
         </div>
       </div>
     </section>
 
-    <div v-else class="antialiased bg-gray-100">
-      <nav class="bg-gray-100 px-4 py-2.5 fixed left-0 right-0 top-0 z-50">
-        <div class="flex flex-wrap justify-between items-center">
-          <div class="flex justify-start items-center">
-            <button class="p-2 mr-2 text-gray-600 rounded-lg cursor-pointer md:hidden hover:text-gray-900 hover:bg-gray-200" @click="mobileSidebarOpen = !mobileSidebarOpen"><Menu :size="24" aria-hidden="true" /><span class="sr-only">Toggle sidebar</span></button>
-            <RouterLink :to="{ name: 'schedules' }" class="flex items-center justify-between mr-4"><span class="flex items-center self-center text-2xl font-semibold whitespace-nowrap">CR<Clock3 class="mx-0.5" :size="24" aria-hidden="true" />NTAINER</span></RouterLink>
-            <div class="hidden md:block md:pl-2"><label class="sr-only">Search</label><div class="relative md:w-96"><div class="flex absolute inset-y-0 left-0 items-center pl-3 pointer-events-none"><Search :size="20" class="text-gray-500" aria-hidden="true" /></div><input class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full pl-10 p-2.5" placeholder="Search" /></div></div>
-          </div>
-          <div class="relative flex items-center lg:order-3">
-            <button class="flex mx-3 text-sm bg-gray-100 rounded-full focus:text-red-300" @click="userMenuOpen = !userMenuOpen"><span class="sr-only">Open user menu</span><Settings :size="20" aria-hidden="true" /></button>
-            <div v-if="userMenuOpen" class="absolute right-0 top-8 z-50 my-4 w-56 text-base list-none bg-white rounded-xl divide-y divide-gray-100 shadow">
-              <div class="py-3 px-4"><span class="block text-sm font-semibold text-gray-900">{{ currentUser.username }}</span><span class="block text-sm text-gray-900 truncate">{{ currentUser.email }}</span></div>
-              <ul class="py-1 text-gray-700"><li><RouterLink :to="{ name: 'users' }" class="flex w-full items-center py-2 px-4 text-sm hover:bg-gray-100" @click="userMenuOpen = false"><Users :size="20" class="mr-2 text-gray-400" aria-hidden="true" />User management</RouterLink></li></ul>
-              <ul class="py-1 text-gray-700"><li><button class="block w-full py-2 px-4 text-left text-sm hover:bg-gray-100" @click="signOut">Sign Out</button></li></ul>
+    <div v-else class="app-shell">
+      <nav class="app-topbar">
+        <div class="topbar-start">
+          <button class="mobile-menu" @click="mobileSidebarOpen = !mobileSidebarOpen"><Menu :size="21" aria-hidden="true" /><span class="sr-only">Toggle sidebar</span></button>
+          <RouterLink :to="{ name: 'schedules' }" class="mobile-brand brand-lockup"><span class="brand-icon"><Clock3 :size="18" aria-hidden="true" /></span><span>Crontainer</span></RouterLink>
+          <label class="search-box">
+            <span class="sr-only">Search current view</span>
+            <Search :size="18" aria-hidden="true" />
+            <input ref="searchInput" v-model="searchQuery" placeholder="Search this view" />
+            <kbd>⌘ K</kbd>
+          </label>
+        </div>
+        <div class="topbar-actions">
+          <div class="system-status"><span class="status-dot"></span><span>System healthy</span></div>
+          <div class="relative">
+            <button class="user-trigger" :aria-expanded="userMenuOpen" @click="userMenuOpen = !userMenuOpen"><span class="user-avatar">{{ userInitials }}</span><span class="user-name">{{ currentUser.first_name || currentUser.username }}</span><Settings :size="16" aria-hidden="true" /><span class="sr-only">Open user menu</span></button>
+            <div v-if="userMenuOpen" class="user-popover">
+              <div class="user-summary"><span class="user-avatar user-avatar-large">{{ userInitials }}</span><span><strong>{{ currentUser.username }}</strong><small>{{ currentUser.email || 'Crontainer administrator' }}</small></span></div>
+              <ul><li><RouterLink :to="{ name: 'users' }" @click="userMenuOpen = false"><Users :size="17" aria-hidden="true" />User management</RouterLink></li></ul>
+              <ul><li><button @click="signOut"><LockKeyholeOpen :size="17" aria-hidden="true" />Sign out</button></li></ul>
             </div>
           </div>
         </div>
       </nav>
 
-      <aside class="fixed top-0 left-0 z-40 w-64 h-screen pt-14 transition-transform bg-gray-100 border-r border-gray-100 md:translate-x-0" :class="mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'" aria-label="Sidenav">
-        <div class="overflow-y-auto py-5 px-4 h-full bg-gray-100">
-          <ul class="space-y-2">
-            <li v-for="[key, label, icon] in navItems" :key="key"><RouterLink :to="{ name: listRouteNames[key] }" class="flex items-center p-2 w-full text-base font-medium text-gray-900 rounded-lg hover:bg-gray-300 group" :class="{ 'bg-gray-200': activeTab === key }" @click="mobileSidebarOpen = false"><component :is="icon" :size="20" aria-hidden="true" /><span class="ml-3">{{ label }}</span><div class="w-full text-right text-gray-400">{{ collections[key].length }}</div></RouterLink></li>
+      <button v-if="mobileSidebarOpen" class="sidebar-scrim" aria-label="Close sidebar" @click="mobileSidebarOpen = false"></button>
+      <aside class="app-sidebar" :class="{ 'sidebar-open': mobileSidebarOpen }" aria-label="Primary navigation">
+        <div class="sidebar-inner">
+          <RouterLink :to="{ name: 'schedules' }" class="sidebar-brand brand-lockup"><span class="brand-icon"><Clock3 :size="21" aria-hidden="true" /></span><span>Crontainer</span></RouterLink>
+          <div class="sidebar-label">Workspace</div>
+          <ul class="sidebar-nav">
+            <li v-for="[key, label, icon] in navItems" :key="key"><RouterLink :to="{ name: listRouteNames[key] }" class="side-link" :class="{ 'side-link-active': activeTab === key }" @click="mobileSidebarOpen = false"><component :is="icon" :size="19" aria-hidden="true" /><span>{{ label }}</span><small>{{ collections[key].length }}</small></RouterLink></li>
           </ul>
-          <ul class="pt-5 mt-5 space-y-2 border-t border-gray-200">
-            <li><a href="https://github.com/getcrontainer/" target="_blank" rel="noreferrer" class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-200"><BookOpen :size="18" aria-hidden="true" /><span class="ml-3">Docs</span></a></li>
-            <li><a href="https://github.com/getcrontainer/" target="_blank" rel="noreferrer" class="flex items-center p-2 text-base font-medium text-gray-900 rounded-lg hover:bg-gray-200"><GitFork :size="18" aria-hidden="true" /><span class="ml-3">Github</span></a></li>
+          <div class="sidebar-spacer"></div>
+          <div class="sidebar-label">Resources</div>
+          <ul class="sidebar-support">
+            <li><a href="https://github.com/getcrontainer/" target="_blank" rel="noreferrer"><BookOpen :size="18" aria-hidden="true" /><span>Documentation</span></a></li>
+            <li><a href="https://github.com/getcrontainer/" target="_blank" rel="noreferrer"><GitFork :size="18" aria-hidden="true" /><span>GitHub</span></a></li>
           </ul>
+          <div class="sidebar-note"><Container :size="20" aria-hidden="true" /><div><strong>Ready to run</strong><span>{{ collections.nodes.length || 'Local' }} runtime {{ collections.nodes.length === 1 ? 'node' : 'nodes' }}</span></div><span class="status-dot"></span></div>
         </div>
       </aside>
 
-      <main class="md:ml-64 pt-20 bg-gray-100 ml-5 min-h-screen"><div class="bg-white p-5 rounded-tl-3xl shadow-2xl min-h-[calc(100vh-80px)]">
-        <p v-if="notice" class="mb-4 p-3 rounded-lg text-green-700 bg-green-50">{{ notice }}</p><p v-if="error" class="mb-4 p-3 rounded-lg text-red-700 bg-red-50">{{ error }}</p>
+      <main class="app-content"><div class="app-surface">
+        <p v-if="notice" class="alert alert-success"><Check :size="18" aria-hidden="true" />{{ notice }}</p><p v-if="error" class="alert alert-error">{{ error }}</p>
 
-        <section v-if="isList('schedules')">
-          <div class="container p-2"><h3 class="text-3xl text-gray-600 font-bold">Schedules</h3></div>
-          <div class="not-format mt-4 relative overflow-x-auto rounded-lg mb-12">
-            <table class="w-full text-sm text-left text-gray-500">
+        <section v-if="isList('schedules')" class="resource-section">
+          <header class="page-heading"><div><p class="eyebrow">Automation</p><h1>Schedules</h1><p>Every recurring workload, precisely timed and quietly under control.</p></div><RouterLink :to="{ name: 'schedule-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New schedule</RouterLink></header>
+          <div class="metric-grid">
+            <article class="metric-card metric-featured"><div class="metric-icon"><CalendarClock :size="20" aria-hidden="true" /></div><div><span>Total schedules</span><strong>{{ collections.schedules.length }}</strong><small>configured automations</small></div></article>
+            <article class="metric-card"><div class="metric-icon"><Activity :size="20" aria-hidden="true" /></div><div><span>Active now</span><strong>{{ activeSchedules }}</strong><small>{{ collections.schedules.length - activeSchedules }} paused</small></div></article>
+            <article class="metric-card"><div class="metric-icon"><Monitor :size="20" aria-hidden="true" /></div><div><span>Runtime nodes</span><strong>{{ collections.nodes.length }}</strong><small>available targets</small></div></article>
+          </div>
+          <div class="data-panel not-format relative overflow-x-auto">
+            <div class="panel-heading"><div><h2>All schedules</h2><span>{{ visibleCollections.schedules.length }} {{ visibleCollections.schedules.length === 1 ? 'schedule' : 'schedules' }}</span></div><span class="panel-badge"><span class="status-dot"></span>Live</span></div>
+            <table class="resource-table w-full text-sm text-left">
               <thead class="text-sm font-bold uppercase text-gray-400"><tr><th class="px-6 py-3">Name</th><th class="py-3 text-center">Active</th><th class="px-6 py-3 w-36">Cron Rule</th><th class="px-6 py-3">Source</th><th class="px-6 py-3">CPU</th><th class="px-6 py-3">Memory</th><th class="px-6 py-3">Owner</th><th class="px-6 py-3 w-36">Action</th></tr></thead>
-              <tbody><tr v-for="schedule in collections.schedules" :key="schedule.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="text-base font-semibold">{{ schedule.name }}</div><div class="text-xs font-semibold text-gray-500">{{ schedule.id }}</div></td><td class="text-center"><div class="inline-flex h-2.5 w-2.5 rounded-full" :class="schedule.active ? 'bg-green-500' : 'bg-red-500'"></div></td><td class="px-6 py-4"><span :title="schedule.cron_description">{{ schedule.cron_rule }}</span></td><td class="px-6 py-4"><div class="flex items-center">
+              <tbody><tr v-for="schedule in visibleCollections.schedules" :key="schedule.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ schedule.name }}</div><div class="table-secondary">{{ schedule.id }}</div></td><td class="text-center"><span class="state-pill" :class="schedule.active ? 'state-active' : 'state-paused'"><span></span>{{ schedule.active ? 'Active' : 'Paused' }}</span></td><td class="px-6 py-4"><code class="cron-code" :title="schedule.cron_description">{{ schedule.cron_rule }}</code></td><td class="px-6 py-4"><div class="flex items-center">
                 <span
                   class="source-tooltip-trigger me-4"
                   tabindex="0"
@@ -357,7 +419,7 @@ onBeforeUnmount(() => {
               </div></td><td class="px-6 py-4"><span v-if="schedule.cpu">{{ schedule.cpu }}</span><Infinity v-else :size="18" aria-label="Unlimited" /></td><td class="px-6 py-4"><span v-if="schedule.memory">{{ schedule.memory }} MB</span><Infinity v-else :size="18" aria-label="Unlimited" /></td><td class="px-6 py-4">{{ schedule.created_by || 'system' }}</td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete schedule" @click="requestDelete('schedules', schedule)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'schedule-edit', params: { id: schedule.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit schedule"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody>
             </table>
           </div>
-          <RouterLink :to="{ name: 'schedule-new' }" class="fixed end-6 bottom-6 btn-primary rounded-full w-14 h-14 items-center justify-center flex px-0 py-0" aria-label="Add schedule"><Plus :size="30" aria-hidden="true" /></RouterLink>
+          <RouterLink :to="{ name: 'schedule-new' }" class="mobile-fab" aria-label="Add schedule"><Plus :size="25" aria-hidden="true" /></RouterLink>
         </section>
 
         <div v-if="isForm('schedules')" :class="{ 'modal-backdrop': isModal('schedules') }" @click.self="isModal('schedules') && closeForm('schedules')">
@@ -441,9 +503,19 @@ onBeforeUnmount(() => {
         </section>
         </div>
 
-        <section v-if="isList('jobs')"><div class="container p-2"><h3 class="text-3xl text-gray-600 font-bold">Jobs</h3></div><div class="not-format mt-4 relative overflow-x-auto rounded-lg"><table class="w-full text-sm text-left text-gray-500"><thead class="text-sm font-bold uppercase text-gray-400"><tr><th class="px-6 py-3 w-10"><input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded" /></th><th class="px-6 py-3">Id</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Schedule</th><th class="px-6 py-3">Cron rule</th><th class="px-6 py-3">Started at</th><th class="px-6 py-3">Duration</th><th class="px-6 py-3">Action</th></tr></thead><tbody><tr v-for="job in collections.jobs" :key="job.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded" /></td><td class="px-6 py-4 text-gray-600 whitespace-nowrap">{{ job.id }}</td><td class="px-6 py-4">{{ job.status }} ({{ job.status_code ?? '—' }})</td><td class="px-6 py-4">{{ job.schedule_name }}</td><td class="px-6 py-4">{{ job.schedule_cron_rule || '—' }}</td><td class="px-6 py-4">{{ new Date(job.created_at).toLocaleString() }}</td><td class="px-6 py-4">{{ job.duration }}s</td><td class="px-6 py-4"><details v-if="job.log"><summary class="btn-mini-edit" aria-label="Show job log"><Logs :size="18" aria-hidden="true" /></summary><pre class="mt-2 whitespace-pre-wrap">{{ job.log }}</pre></details><span v-else class="btn-mini-edit bg-gray-100 text-gray-400" aria-label="No job log"><Logs :size="18" aria-hidden="true" /></span></td></tr></tbody></table></div></section>
+        <section v-if="isList('jobs')" class="resource-section">
+          <header class="page-heading"><div><p class="eyebrow">Execution history</p><h1>Jobs</h1><p>A clear, chronological view of every container run.</p></div></header>
+          <div class="metric-grid metric-grid-compact">
+            <article class="metric-card metric-featured"><div class="metric-icon"><Activity :size="20" aria-hidden="true" /></div><div><span>Total runs</span><strong>{{ collections.jobs.length }}</strong><small>recorded executions</small></div></article>
+            <article class="metric-card"><div class="metric-icon"><Check :size="20" aria-hidden="true" /></div><div><span>Healthy runs</span><strong>{{ healthyJobs }}</strong><small>completed successfully</small></div></article>
+          </div>
+          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Recent activity</h2><span>{{ visibleCollections.jobs.length }} recorded runs</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all jobs" /></th><th class="px-6 py-3">Id</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Schedule</th><th class="px-6 py-3">Cron rule</th><th class="px-6 py-3">Started at</th><th class="px-6 py-3">Duration</th><th class="px-6 py-3">Log</th></tr></thead><tbody><tr v-for="job in visibleCollections.jobs" :key="job.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select job ${job.id}`" /></td><td class="px-6 py-4 whitespace-nowrap"><span class="table-secondary">{{ job.id }}</span></td><td class="px-6 py-4"><span class="state-pill" :class="Number(job.status_code) === 0 ? 'state-active' : 'state-paused'"><span></span>{{ job.status || 'Unknown' }}</span></td><td class="px-6 py-4"><span class="table-primary">{{ job.schedule_name }}</span></td><td class="px-6 py-4"><code class="cron-code">{{ job.schedule_cron_rule || '—' }}</code></td><td class="px-6 py-4">{{ new Date(job.created_at).toLocaleString() }}</td><td class="px-6 py-4">{{ job.duration }}s</td><td class="px-6 py-4"><details v-if="job.log"><summary class="btn-mini-edit" aria-label="Show job log"><Logs :size="18" aria-hidden="true" /></summary><pre class="job-log mt-2 whitespace-pre-wrap">{{ job.log }}</pre></details><span v-else class="btn-mini-edit is-disabled" aria-label="No job log"><Logs :size="18" aria-hidden="true" /></span></td></tr></tbody></table></div>
+        </section>
 
-        <section v-if="isList('credentials')"><div class="container p-2"><h3 class="text-3xl text-gray-600 font-bold">Credentials</h3></div><div class="not-format mt-4 relative overflow-x-auto rounded-lg"><table class="w-full text-sm text-left text-gray-500"><thead class="text-sm font-bold uppercase text-gray-400"><tr><th class="px-6 py-3">Name</th><th class="px-6 py-3">Category</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Schedules</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="credential in collections.credentials" :key="credential.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="text-base font-semibold">{{ credential.name }}</div></td><td class="px-6 py-4">{{ categoryName(credential.category) }}</td><td class="px-6 py-4">{{ credential.username }}</td><td class="px-6 py-4">{{ credentialScheduleCount(credential.id) }}</td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete credential" @click="requestDelete('credentials', credential)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'credential-edit', params: { id: credential.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit credential"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'credential-new' }" class="fixed end-6 bottom-6 btn-primary rounded-full w-14 h-14 items-center justify-center flex px-0 py-0" aria-label="Add credential"><Plus :size="30" aria-hidden="true" /></RouterLink></section>
+        <section v-if="isList('credentials')" class="resource-section">
+          <header class="page-heading"><div><p class="eyebrow">Secure access</p><h1>Credentials</h1><p>Private connection details, organized without exposing what matters.</p></div><RouterLink :to="{ name: 'credential-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New credential</RouterLink></header>
+          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Credential vault</h2><span>{{ visibleCollections.credentials.length }} secure connections</span></div><span class="panel-badge panel-badge-neutral"><LockKeyhole :size="13" aria-hidden="true" />Encrypted</span></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3">Name</th><th class="px-6 py-3">Provider</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Schedules</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="credential in visibleCollections.credentials" :key="credential.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ credential.name }}</div></td><td class="px-6 py-4"><span class="provider-chip"><KeyRound :size="14" aria-hidden="true" />{{ categoryName(credential.category) }}</span></td><td class="px-6 py-4">{{ credential.username || 'Token only' }}</td><td class="px-6 py-4"><span class="count-chip">{{ credentialScheduleCount(credential.id) }}</span></td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete credential" @click="requestDelete('credentials', credential)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'credential-edit', params: { id: credential.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit credential"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'credential-new' }" class="mobile-fab" aria-label="Add credential"><Plus :size="25" aria-hidden="true" /></RouterLink>
+        </section>
         <div v-if="isForm('credentials')" :class="{ 'modal-backdrop': isModal('credentials') }" @click.self="isModal('credentials') && closeForm('credentials')">
         <section class="form-card" :class="{ 'modal-card': isModal('credentials') }" :role="isModal('credentials') ? 'dialog' : undefined" :aria-modal="isModal('credentials') || undefined" aria-labelledby="credential-form-title">
           <button v-if="isModal('credentials')" type="button" class="modal-close" aria-label="Close new credential" @click="closeForm('credentials')"><X :size="18" aria-hidden="true" /></button>
@@ -480,7 +552,11 @@ onBeforeUnmount(() => {
         </section>
         </div>
 
-        <section v-if="isList('nodes')"><div class="container p-2"><h3 class="text-3xl text-gray-600 font-bold">Nodes</h3></div><div class="not-format mt-4 relative overflow-x-auto rounded-lg"><table class="w-full text-sm text-left text-gray-500"><thead class="text-sm font-bold uppercase text-gray-400"><tr><th class="px-6 py-3 w-10"><input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded" /></th><th class="px-6 py-3">Name</th><th class="px-6 py-3">Host</th><th class="px-6 py-3">Port</th><th class="px-6 py-3">Use SSH</th><th class="px-6 py-3">Secret</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="node in collections.nodes" :key="node.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded" /></td><td class="px-6 py-4 text-gray-600 whitespace-nowrap"><div class="text-base font-semibold">{{ node.name }}</div></td><td class="px-6 py-4">{{ node.host }}</td><td class="px-6 py-4">{{ node.port }}</td><td class="px-6 py-4">{{ node.use_ssh }}</td><td class="px-6 py-4">••••••••</td><td class="px-6 py-4"><button class="btn-mini-remove" aria-label="Delete node" @click="requestDelete('nodes', node)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'node-edit', params: { id: node.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit node"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'node-new' }" class="fixed end-6 bottom-6 btn-primary rounded-full w-14 h-14 items-center justify-center flex px-0 py-0" aria-label="Add node"><Plus :size="30" aria-hidden="true" /></RouterLink></section>
+        <section v-if="isList('nodes')" class="resource-section">
+          <header class="page-heading"><div><p class="eyebrow">Infrastructure</p><h1>Nodes</h1><p>The runtime destinations where your scheduled work comes alive.</p></div><RouterLink :to="{ name: 'node-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New node</RouterLink></header>
+          <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Monitor :size="20" aria-hidden="true" /></div><div><span>Runtime nodes</span><strong>{{ collections.nodes.length }}</strong><small>configured endpoints</small></div></article><article class="metric-card"><div class="metric-icon"><LockKeyhole :size="20" aria-hidden="true" /></div><div><span>SSH secured</span><strong>{{ sshNodes }}</strong><small>encrypted connections</small></div></article></div>
+          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Connected infrastructure</h2><span>{{ visibleCollections.nodes.length }} runtime targets</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all nodes" /></th><th class="px-6 py-3">Name</th><th class="px-6 py-3">Host</th><th class="px-6 py-3">Port</th><th class="px-6 py-3">Connection</th><th class="px-6 py-3">Secret</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="node in visibleCollections.nodes" :key="node.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select node ${node.name}`" /></td><td class="px-6 py-4 whitespace-nowrap"><div class="table-primary">{{ node.name }}</div></td><td class="px-6 py-4"><code class="host-code">{{ node.host }}</code></td><td class="px-6 py-4">{{ node.port }}</td><td class="px-6 py-4"><span class="provider-chip"><LockKeyhole v-if="node.use_ssh" :size="14" aria-hidden="true" /><Monitor v-else :size="14" aria-hidden="true" />{{ node.use_ssh ? 'SSH' : 'Direct' }}</span></td><td class="px-6 py-4"><span class="secret-value">••••••••</span></td><td class="px-6 py-4"><button class="btn-mini-remove" aria-label="Delete node" @click="requestDelete('nodes', node)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'node-edit', params: { id: node.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit node"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'node-new' }" class="mobile-fab" aria-label="Add node"><Plus :size="25" aria-hidden="true" /></RouterLink>
+        </section>
         <div v-if="isForm('nodes')" :class="{ 'modal-backdrop': isModal('nodes') }" @click.self="isModal('nodes') && closeForm('nodes')">
         <section class="form-card" :class="{ 'modal-card': isModal('nodes') }" :role="isModal('nodes') ? 'dialog' : undefined" :aria-modal="isModal('nodes') || undefined" aria-labelledby="node-form-title">
           <button v-if="isModal('nodes')" type="button" class="modal-close" aria-label="Close new node" @click="closeForm('nodes')"><X :size="18" aria-hidden="true" /></button>
@@ -512,7 +588,11 @@ onBeforeUnmount(() => {
         </section>
         </div>
 
-        <section v-if="isList('users')"><div class="container p-2"><h3 class="text-3xl text-gray-600 font-bold">Users</h3></div><div class="not-format mt-4 relative overflow-x-auto rounded-lg"><table class="w-full text-sm text-left text-gray-500"><thead class="text-sm font-bold uppercase text-gray-400"><tr><th class="px-6 py-3">Name/Email</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Joined at</th><th class="px-6 py-3">Last login</th><th class="px-6 py-3">Admin</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody class="text-gray-700"><tr v-for="user in collections.users" :key="user.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl">{{ [user.first_name, user.last_name].filter(Boolean).join(' ') }}<br /><small>{{ user.email }}</small></td><td class="px-6 py-4">{{ user.username }}</td><td class="px-6 py-4">{{ user.date_joined ? new Date(user.date_joined).toLocaleString() : '—' }}</td><td class="px-6 py-4">{{ user.last_login ? new Date(user.last_login).toLocaleString() : '—' }}</td><td class="px-6 py-4"><Check v-if="user.is_superuser" :size="20" class="text-green-600" aria-label="Administrator" /></td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete user" @click="requestDelete('users', user)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'user-edit', params: { id: user.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit user"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'user-new' }" class="fixed end-6 bottom-6 btn-primary rounded-full w-14 h-14 items-center justify-center flex px-0 py-0" aria-label="Add user"><Plus :size="30" aria-hidden="true" /></RouterLink></section>
+        <section v-if="isList('users')" class="resource-section">
+          <header class="page-heading"><div><p class="eyebrow">Access control</p><h1>Users</h1><p>Manage the people trusted with your Crontainer workspace.</p></div><RouterLink :to="{ name: 'user-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />Invite user</RouterLink></header>
+          <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Users :size="20" aria-hidden="true" /></div><div><span>Total users</span><strong>{{ collections.users.length }}</strong><small>workspace accounts</small></div></article><article class="metric-card"><div class="metric-icon"><KeyRound :size="20" aria-hidden="true" /></div><div><span>Administrators</span><strong>{{ adminUsers }}</strong><small>elevated access</small></div></article></div>
+          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Workspace members</h2><span>{{ visibleCollections.users.length }} people with access</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3">Name / Email</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Joined</th><th class="px-6 py-3">Last login</th><th class="px-6 py-3">Role</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="user in visibleCollections.users" :key="user.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username }}</div><div class="table-secondary">{{ user.email || 'No email set' }}</div></td><td class="px-6 py-4">{{ user.username }}</td><td class="px-6 py-4">{{ user.date_joined ? new Date(user.date_joined).toLocaleDateString() : '—' }}</td><td class="px-6 py-4">{{ user.last_login ? new Date(user.last_login).toLocaleString() : 'Never' }}</td><td class="px-6 py-4"><span class="provider-chip"><Check v-if="user.is_superuser" :size="14" aria-hidden="true" />{{ user.is_superuser ? 'Administrator' : 'Member' }}</span></td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete user" @click="requestDelete('users', user)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'user-edit', params: { id: user.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit user"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'user-new' }" class="mobile-fab" aria-label="Add user"><Plus :size="25" aria-hidden="true" /></RouterLink>
+        </section>
         <div v-if="isForm('users')" :class="{ 'modal-backdrop': isModal('users') }" @click.self="isModal('users') && closeForm('users')">
         <section class="form-card" :class="{ 'modal-card': isModal('users') }" :role="isModal('users') ? 'dialog' : undefined" :aria-modal="isModal('users') || undefined" aria-labelledby="user-form-title">
           <button v-if="isModal('users')" type="button" class="modal-close" aria-label="Close user form" @click="closeForm('users')"><X :size="18" aria-hidden="true" /></button>
@@ -573,5 +653,5 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </main>
-  <div v-else class="min-h-screen grid place-items-center bg-gray-100 text-gray-500">Loading Crontainer…</div>
+  <div v-else class="loading-screen"><span class="brand-icon"><Clock3 :size="22" aria-hidden="true" /></span><span>Preparing your workspace…</span></div>
 </template>
