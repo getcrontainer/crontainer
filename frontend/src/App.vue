@@ -278,7 +278,27 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleEscape));
           <div class="not-format mt-4 relative overflow-x-auto rounded-lg mb-12">
             <table class="w-full text-sm text-left text-gray-500">
               <thead class="text-sm font-bold uppercase text-gray-400"><tr><th class="px-6 py-3">Name</th><th class="py-3 text-center">Active</th><th class="px-6 py-3 w-36">Cron Rule</th><th class="px-6 py-3">Source</th><th class="px-6 py-3">CPU</th><th class="px-6 py-3">Memory</th><th class="px-6 py-3">Owner</th><th class="px-6 py-3 w-36">Action</th></tr></thead>
-              <tbody><tr v-for="schedule in collections.schedules" :key="schedule.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="text-base font-semibold">{{ schedule.name }}</div><div class="text-xs font-semibold text-gray-500">{{ schedule.id }}</div></td><td class="text-center"><div class="inline-flex h-2.5 w-2.5 rounded-full" :class="schedule.active ? 'bg-green-500' : 'bg-red-500'"></div></td><td class="px-6 py-4"><span :title="schedule.cron_description">{{ schedule.cron_rule }}</span></td><td class="px-6 py-4"><div class="flex items-center"><component :is="schedule.credential ? LockKeyhole : LockKeyholeOpen" :size="18" class="me-4" :class="{ 'text-gray-300': !schedule.credential }" aria-hidden="true" /><component :is="sourceIcon(schedule.source_name)" :size="18" class="me-3" aria-hidden="true" />{{ schedule.image }}</div></td><td class="px-6 py-4"><span v-if="schedule.cpu">{{ schedule.cpu }}</span><Infinity v-else :size="18" aria-label="Unlimited" /></td><td class="px-6 py-4"><span v-if="schedule.memory">{{ schedule.memory }} MB</span><Infinity v-else :size="18" aria-label="Unlimited" /></td><td class="px-6 py-4">{{ schedule.created_by || 'system' }}</td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete schedule" @click="requestDelete('schedules', schedule)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'schedule-edit', params: { id: schedule.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit schedule"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody>
+              <tbody><tr v-for="schedule in collections.schedules" :key="schedule.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="text-base font-semibold">{{ schedule.name }}</div><div class="text-xs font-semibold text-gray-500">{{ schedule.id }}</div></td><td class="text-center"><div class="inline-flex h-2.5 w-2.5 rounded-full" :class="schedule.active ? 'bg-green-500' : 'bg-red-500'"></div></td><td class="px-6 py-4"><span :title="schedule.cron_description">{{ schedule.cron_rule }}</span></td><td class="px-6 py-4"><div class="flex items-center">
+                <span
+                  class="source-tooltip-trigger me-4"
+                  tabindex="0"
+                  aria-label="Credential status"
+                  :aria-describedby="`credential-status-${schedule.id}`"
+                >
+                  <component :is="schedule.credential ? LockKeyhole : LockKeyholeOpen" :size="18" :class="{ 'text-gray-300': !schedule.credential }" aria-hidden="true" />
+                  <span :id="`credential-status-${schedule.id}`" class="source-tooltip" role="tooltip">{{ schedule.credential ? 'Private source' : 'Public source' }}</span>
+                </span>
+                <span
+                  class="source-tooltip-trigger me-3"
+                  tabindex="0"
+                  aria-label="Source provider"
+                  :aria-describedby="`source-provider-${schedule.id}`"
+                >
+                  <component :is="sourceIcon(schedule.source_name)" :size="18" aria-hidden="true" />
+                  <span :id="`source-provider-${schedule.id}`" class="source-tooltip" role="tooltip">{{ schedule.source_name }}</span>
+                </span>
+                {{ schedule.image }}
+              </div></td><td class="px-6 py-4"><span v-if="schedule.cpu">{{ schedule.cpu }}</span><Infinity v-else :size="18" aria-label="Unlimited" /></td><td class="px-6 py-4"><span v-if="schedule.memory">{{ schedule.memory }} MB</span><Infinity v-else :size="18" aria-label="Unlimited" /></td><td class="px-6 py-4">{{ schedule.created_by || 'system' }}</td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete schedule" @click="requestDelete('schedules', schedule)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'schedule-edit', params: { id: schedule.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit schedule"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody>
             </table>
           </div>
           <RouterLink :to="{ name: 'schedule-new' }" class="fixed end-6 bottom-6 btn-primary rounded-full w-14 h-14 items-center justify-center flex px-0 py-0" aria-label="Add schedule"><Plus :size="30" aria-hidden="true" /></RouterLink>
