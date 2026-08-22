@@ -1,24 +1,5 @@
-from .credential import (
-    TestCredentialCreateView,
-    TestCredentialDeleteView,
-    TestCredentialListView,
-)
-from .describe_cron import TestDescribeCronView
-from .schedule import (
-    TestScheduleCreateView,
-    TestScheduleDeleteView,
-    TestScheduleListView,
-)
+"""API test package."""
 
-__all__ = [
-    # Credential
-    "TestCredentialCreateView",
-    "TestCredentialDeleteView",
-    "TestCredentialListView",
-    # Schedule
-    "TestScheduleCreateView",
-    "TestScheduleDeleteView",
-    "TestScheduleListView",
-    # Miscellaneous,
-    "TestDescribeCronView",
-]
+from .test_api import TestAuthAndUtilityApi, TestCredentialApi, TestScheduleApi
+
+__all__ = ["TestAuthAndUtilityApi", "TestCredentialApi", "TestScheduleApi"]

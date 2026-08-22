@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["*"]),
-    CRONJOB_CMD=(str, "{cron_rule}\troot\tcd /app && python3 /app/manage.py run_schedule {schedule_id}"),
+    CRONJOB_CMD=(str, "{cron_rule}\troot\tcd /app && /app/.venv/bin/python /app/manage.py run_schedule {schedule_id}"),
     CRONTAB_PATH=(str, "/tmp/cron.d"),
     CSRF_TRUSTED_ORIGINS=(list, []),
     SESSION_KEY=(str, "django-insecure-t(=_djgy021(tvq%doh+u(v*#lz0zx8lc6i93!u5hfo$ce!z2b"),
@@ -35,20 +35,17 @@ CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 # Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django.contrib.staticfiles",
     "apps.core",
     "apps.node",
-    "widget_tweaks",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -59,21 +56,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "crontainer.urls"
 
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.debug",
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
-            ],
-        },
-    },
-]
+TEMPLATES = []
 
 WSGI_APPLICATION = "crontainer.wsgi.application"
 
@@ -116,33 +99,18 @@ USE_I18N = True
 
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-STATIC_URL = "static/"
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# Added
-
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-STATICFILES_DIRS = [BASE_DIR / "apps/static"]
 
 # Crontab settings
 
 CRONTAB_PATH = Path(env("CRONTAB_PATH"))
 CRONJOB_CMD = env("CRONJOB_CMD")
 
-# Debug toolbar settings
-if DEBUG:
-    INSTALLED_APPS += ["debug_toolbar"]
-    # Middleware should be placed right after anything that encodes the response's content
-    # (in this case, WhiteNoise)
-    MIDDLEWARE.insert(2, "debug_toolbar.middleware.DebugToolbarMiddleware")
-    INTERNAL_IPS = [
-        "127.0.0.1",
-    ]
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+}
