@@ -9,6 +9,7 @@ const routes = [
   { path: "/schedules/new", name: "schedule-new", component: RouteMarker, meta: { resource: "schedules", mode: "form", presentation: "modal" } },
   { path: "/schedules/:id/edit", name: "schedule-edit", component: RouteMarker, meta: { resource: "schedules", mode: "form", presentation: "modal" } },
   { path: "/jobs", name: "jobs", component: RouteMarker, meta: { resource: "jobs", mode: "list" } },
+  { path: "/jobs/:id/log", name: "job-log", component: RouteMarker, meta: { resource: "jobs", mode: "log" } },
   { path: "/credentials", name: "credentials", component: RouteMarker, meta: { resource: "credentials", mode: "list" } },
   { path: "/credentials/new", name: "credential-new", component: RouteMarker, meta: { resource: "credentials", mode: "form", presentation: "modal" } },
   { path: "/credentials/:id/edit", name: "credential-edit", component: RouteMarker, meta: { resource: "credentials", mode: "form" } },

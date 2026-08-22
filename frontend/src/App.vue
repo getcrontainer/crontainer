@@ -1,12 +1,14 @@
 <script setup>
 import {
   Activity,
+  ArrowLeft,
   BookOpen,
   CalendarClock,
   Check,
   Clock3,
   Cloud,
   Container,
+  Copy,
   GitBranch,
   GitFork,
   Infinity,
@@ -20,6 +22,7 @@ import {
   Plus,
   Search,
   Settings,
+  Terminal,
   Trash2,
   Users,
   X,
@@ -56,6 +59,7 @@ const mobileSidebarOpen = ref(false);
 const userMenuOpen = ref(false);
 const searchQuery = ref("");
 const searchInput = ref(null);
+const logCopied = ref(false);
 const loginForm = reactive({ username: "", password: "" });
 const editing = reactive({ schedules: null, credentials: null, users: null, nodes: null });
 const scheduleForm = reactive(emptySchedule());
@@ -96,6 +100,114 @@ const visibleCollections = computed(() => {
     items.filter((item) => Object.values(item).some((value) => String(value ?? "").toLowerCase().includes(query))),
   ]));
 });
+const selectedJob = computed(() => {
+  if (route.meta.resource !== "jobs" || route.meta.mode !== "log") return null;
+  return collections.value.jobs.find((job) => String(job.id) === String(route.params.id)) || null;
+});
+const terminalLogLines = computed(() => parseTerminalLog(selectedJob.value?.log || ""));
+
+const ansiColorNames = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
+const ghosttyPalette = [
+  "#51576d", "#e78284", "#a6d189", "#e5c890", "#8caaee", "#ca9ee6", "#81c8be", "#b5bfe2",
+  "#626880", "#eebebe", "#b5d39a", "#f0d9a7", "#9bb7f0", "#d6a8e9", "#99d1c9", "#c6d0f5",
+];
+
+function newAnsiState() {
+  return { foreground: "", background: "", color: "", backgroundColor: "", bold: false, dim: false, italic: false, underline: false };
+}
+
+function xtermColor(index) {
+  if (index < 16) return ghosttyPalette[index];
+  if (index >= 232) {
+    const value = 8 + ((index - 232) * 10);
+    return `rgb(${value} ${value} ${value})`;
+  }
+  const offset = index - 16;
+  const levels = [0, 95, 135, 175, 215, 255];
+  return `rgb(${levels[Math.floor(offset / 36)]} ${levels[Math.floor((offset % 36) / 6)]} ${levels[offset % 6]})`;
+}
+
+function applyAnsiCodes(state, rawCodes) {
+  const codes = rawCodes === "" ? [0] : rawCodes.split(";").map(Number);
+  for (let index = 0; index < codes.length; index += 1) {
+    const code = codes[index];
+    if (code === 0) Object.assign(state, newAnsiState());
+    else if (code === 1) state.bold = true;
+    else if (code === 2) state.dim = true;
+    else if (code === 3) state.italic = true;
+    else if (code === 4) state.underline = true;
+    else if (code === 22) { state.bold = false; state.dim = false; }
+    else if (code === 23) state.italic = false;
+    else if (code === 24) state.underline = false;
+    else if (code === 39) { state.foreground = ""; state.color = ""; }
+    else if (code === 49) { state.background = ""; state.backgroundColor = ""; }
+    else if (code >= 30 && code <= 37) { state.foreground = ansiColorNames[code - 30]; state.color = ""; }
+    else if (code >= 90 && code <= 97) { state.foreground = `bright-${ansiColorNames[code - 90]}`; state.color = ""; }
+    else if (code >= 40 && code <= 47) { state.background = ansiColorNames[code - 40]; state.backgroundColor = ""; }
+    else if (code >= 100 && code <= 107) { state.background = `bright-${ansiColorNames[code - 100]}`; state.backgroundColor = ""; }
+    else if ((code === 38 || code === 48) && codes[index + 1] === 5) {
+      const color = xtermColor(codes[index + 2]);
+      if (code === 38) { state.foreground = ""; state.color = color; }
+      else { state.background = ""; state.backgroundColor = color; }
+      index += 2;
+    } else if ((code === 38 || code === 48) && codes[index + 1] === 2) {
+      const color = `rgb(${codes[index + 2]} ${codes[index + 3]} ${codes[index + 4]})`;
+      if (code === 38) { state.foreground = ""; state.color = color; }
+      else { state.background = ""; state.backgroundColor = color; }
+      index += 4;
+    }
+  }
+}
+
+function ansiSegment(text, state) {
+  return {
+    text,
+    classes: [
+      state.foreground && `ansi-fg-${state.foreground}`,
+      state.background && `ansi-bg-${state.background}`,
+      state.bold && "ansi-bold",
+      state.dim && "ansi-dim",
+      state.italic && "ansi-italic",
+      state.underline && "ansi-underline",
+    ].filter(Boolean),
+    style: { color: state.color || undefined, backgroundColor: state.backgroundColor || undefined },
+  };
+}
+
+function plainLogSegments(text) {
+  const tokenPattern = /(https?:\/\/[^\s]+|\b(?:ERROR|FATAL|FAILED|FAILURE)\b|\b(?:WARN|WARNING)\b|\b(?:INFO|DEBUG|TRACE)\b|\b(?:SUCCESS|SUCCEEDED|OK|DONE)\b|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\b\d+(?:\.\d+)?(?:ms|s|MB|GB|%)?\b)/gi;
+  return text.split(tokenPattern).filter((token) => token !== "").map((token) => {
+    let tokenClass = "";
+    if (/^(ERROR|FATAL|FAILED|FAILURE)$/i.test(token)) tokenClass = "log-token-error";
+    else if (/^(WARN|WARNING)$/i.test(token)) tokenClass = "log-token-warning";
+    else if (/^(INFO|DEBUG|TRACE)$/i.test(token)) tokenClass = "log-token-info";
+    else if (/^(SUCCESS|SUCCEEDED|OK|DONE)$/i.test(token)) tokenClass = "log-token-success";
+    else if (/^https?:\/\//i.test(token)) tokenClass = "log-token-link";
+    else if (/^["']/.test(token)) tokenClass = "log-token-string";
+    else if (/^\d/.test(token)) tokenClass = "log-token-number";
+    return { text: token, classes: tokenClass ? [tokenClass] : [], style: {} };
+  });
+}
+
+function parseTerminalLog(log) {
+  const state = newAnsiState();
+  return String(log).replace(/\r\n?/g, "\n").split("\n").map((line) => {
+    const segments = [];
+    const ansiPattern = /\u001b\[([0-9;]*)m/g;
+    let cursor = 0;
+    let match;
+    let hasAnsi = false;
+    while ((match = ansiPattern.exec(line)) !== null) {
+      hasAnsi = true;
+      if (match.index > cursor) segments.push(ansiSegment(line.slice(cursor, match.index), state));
+      applyAnsiCodes(state, match[1]);
+      cursor = ansiPattern.lastIndex;
+    }
+    if (cursor < line.length) segments.push(ansiSegment(line.slice(cursor), state));
+    const stateIsPlain = !state.foreground && !state.background && !state.color && !state.backgroundColor && !state.bold && !state.dim && !state.italic && !state.underline;
+    return !hasAnsi && stateIsPlain ? plainLogSegments(line) : segments;
+  });
+}
 
 function emptySchedule() {
   return { name: "", image: "", cmd: "", parameters: "", cron_rule: "0 0 * * *", active: true, singleton: false, credential: null, cpu: null, memory: null };
@@ -124,6 +236,7 @@ function isList(resource) {
 }
 function isForm(resource) { return activeTab.value === resource && route.meta.mode === "form"; }
 function isModal(resource) { return activeTab.value === resource && route.meta.presentation === "modal"; }
+function isJobLog() { return activeTab.value === "jobs" && route.meta.mode === "log"; }
 function categoryName(category) {
   return { 1: "Dockerhub", 2: "Github PAT", 3: "AWS ECR", 4: "Gitlab PAT", 97: "Generic registry", 98: "Generic Git", 99: "Generic HTTP auth" }[category] || category;
 }
@@ -142,6 +255,13 @@ function sourceIcon(sourceName) {
   return sourceName === "GitHub" || sourceName === "GitLab" ? GitBranch : Container;
 }
 function credentialScheduleCount(credentialId) { return collections.value.schedules.filter((schedule) => schedule.credential === credentialId).length; }
+
+async function copyJobLog() {
+  if (!selectedJob.value?.log) return;
+  await navigator.clipboard.writeText(selectedJob.value.log);
+  logCopied.value = true;
+  window.setTimeout(() => { logCopied.value = false; }, 1600);
+}
 
 function setCronRuleParts(cronRule) {
   const parts = String(cronRule || "").trim().split(/\s+/).slice(0, cronFieldLabels.length);
@@ -289,6 +409,7 @@ watch(() => route.fullPath, () => {
   mobileSidebarOpen.value = false;
   userMenuOpen.value = false;
   searchQuery.value = "";
+  logCopied.value = false;
   if (currentUser.value) syncRouteForm();
 });
 
@@ -509,7 +630,38 @@ onBeforeUnmount(() => {
             <article class="metric-card metric-featured"><div class="metric-icon"><Activity :size="20" aria-hidden="true" /></div><div><span>Total runs</span><strong>{{ collections.jobs.length }}</strong><small>recorded executions</small></div></article>
             <article class="metric-card"><div class="metric-icon"><Check :size="20" aria-hidden="true" /></div><div><span>Healthy runs</span><strong>{{ healthyJobs }}</strong><small>completed successfully</small></div></article>
           </div>
-          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Recent activity</h2><span>{{ visibleCollections.jobs.length }} recorded runs</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all jobs" /></th><th class="px-6 py-3">Id</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Schedule</th><th class="px-6 py-3">Cron rule</th><th class="px-6 py-3">Started at</th><th class="px-6 py-3">Duration</th><th class="px-6 py-3">Log</th></tr></thead><tbody><tr v-for="job in visibleCollections.jobs" :key="job.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select job ${job.id}`" /></td><td class="px-6 py-4 whitespace-nowrap"><span class="table-secondary">{{ job.id }}</span></td><td class="px-6 py-4"><span class="state-pill" :class="Number(job.status_code) === 0 ? 'state-active' : 'state-paused'"><span></span>{{ job.status || 'Unknown' }}</span></td><td class="px-6 py-4"><span class="table-primary">{{ job.schedule_name }}</span></td><td class="px-6 py-4"><code class="cron-code">{{ job.schedule_cron_rule || '—' }}</code></td><td class="px-6 py-4">{{ new Date(job.created_at).toLocaleString() }}</td><td class="px-6 py-4">{{ job.duration }}s</td><td class="px-6 py-4"><details v-if="job.log"><summary class="btn-mini-edit" aria-label="Show job log"><Logs :size="18" aria-hidden="true" /></summary><pre class="job-log mt-2 whitespace-pre-wrap">{{ job.log }}</pre></details><span v-else class="btn-mini-edit is-disabled" aria-label="No job log"><Logs :size="18" aria-hidden="true" /></span></td></tr></tbody></table></div>
+          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Recent activity</h2><span>{{ visibleCollections.jobs.length }} recorded runs</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all jobs" /></th><th class="px-6 py-3">Id</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Schedule</th><th class="px-6 py-3">Cron rule</th><th class="px-6 py-3">Started at</th><th class="px-6 py-3">Duration</th><th class="px-6 py-3">Log</th></tr></thead><tbody><tr v-for="job in visibleCollections.jobs" :key="job.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select job ${job.id}`" /></td><td class="px-6 py-4 whitespace-nowrap"><span class="table-secondary">{{ job.id }}</span></td><td class="px-6 py-4"><span class="state-pill" :class="Number(job.status_code) === 0 ? 'state-active' : 'state-paused'"><span></span>{{ job.status || 'Unknown' }}</span></td><td class="px-6 py-4"><span class="table-primary">{{ job.schedule_name }}</span></td><td class="px-6 py-4"><code class="cron-code">{{ job.schedule_cron_rule || '—' }}</code></td><td class="px-6 py-4">{{ new Date(job.created_at).toLocaleString() }}</td><td class="px-6 py-4">{{ job.duration }}s</td><td class="px-6 py-4"><RouterLink :to="{ name: 'job-log', params: { id: job.id } }" class="btn-mini-edit" :aria-label="`Open log for job ${job.id}`"><Logs :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div>
+        </section>
+
+        <section v-if="isJobLog()" class="resource-section job-log-view">
+          <RouterLink :to="{ name: 'jobs' }" class="log-back"><ArrowLeft :size="16" aria-hidden="true" />All jobs</RouterLink>
+          <template v-if="selectedJob">
+            <header class="page-heading job-log-heading">
+              <div><p class="eyebrow">Execution log</p><h1>{{ selectedJob.schedule_name || 'Job run' }}</h1><p class="job-id">Run {{ selectedJob.id }}</p></div>
+              <span class="state-pill job-log-state" :class="Number(selectedJob.status_code) === 0 ? 'state-active' : 'state-paused'"><span></span>{{ selectedJob.status || 'Unknown' }}</span>
+            </header>
+            <div class="job-log-layout">
+              <article class="log-console">
+                <header class="log-console-bar">
+                  <div><span class="terminal-dots" aria-hidden="true"><i></i><i></i><i></i></span><Terminal :size="15" aria-hidden="true" /><strong>Container output</strong></div>
+                  <button type="button" class="log-copy" :disabled="!selectedJob.log" @click="copyJobLog"><Check v-if="logCopied" :size="14" aria-hidden="true" /><Copy v-else :size="14" aria-hidden="true" />{{ logCopied ? 'Copied' : 'Copy log' }}</button>
+                </header>
+                <pre v-if="selectedJob.log" class="log-output"><code><span v-for="(line, lineIndex) in terminalLogLines" :key="lineIndex" class="terminal-line"><span v-for="(segment, segmentIndex) in line" :key="segmentIndex" :class="segment.classes" :style="segment.style">{{ segment.text }}</span></span></code></pre>
+                <div v-else class="log-empty"><Logs :size="27" aria-hidden="true" /><strong>No output captured</strong><span>This run completed without writing a container log.</span></div>
+              </article>
+              <aside class="job-facts" aria-label="Job details">
+                <div class="job-facts-heading"><span>Run details</span><small>Recorded execution</small></div>
+                <dl>
+                  <div><dt>Status</dt><dd>{{ selectedJob.status || 'Unknown' }}<small>Code {{ selectedJob.status_code ?? '—' }}</small></dd></div>
+                  <div><dt>Started</dt><dd>{{ new Date(selectedJob.created_at).toLocaleString() }}</dd></div>
+                  <div><dt>Duration</dt><dd>{{ selectedJob.duration }}s</dd></div>
+                  <div><dt>Schedule</dt><dd>{{ selectedJob.schedule_name || '—' }}<small><code>{{ selectedJob.schedule_cron_rule || 'No cron rule' }}</code></small></dd></div>
+                  <div><dt>Run ID</dt><dd class="fact-id">{{ selectedJob.id }}</dd></div>
+                </dl>
+              </aside>
+            </div>
+          </template>
+          <div v-else class="job-not-found"><Logs :size="28" aria-hidden="true" /><h1>Job not found</h1><p>This run may no longer be available.</p><RouterLink :to="{ name: 'jobs' }" class="page-primary">Return to jobs</RouterLink></div>
         </section>
 
         <section v-if="isList('credentials')" class="resource-section">
