@@ -28,6 +28,7 @@ import { storeToRefs } from "pinia";
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import { api } from "./api";
 import { useAppStore } from "./stores/app";
 
 const navItems = [
@@ -59,9 +60,14 @@ const credentialForm = reactive(emptyCredential());
 const userForm = reactive(emptyUser());
 const nodeForm = reactive(emptyNode());
 const envRows = ref([]);
+const cronDescription = ref("");
+const cronDescriptionError = ref("");
+const describingCron = ref(false);
 const deleteRequest = ref(null);
 const deleting = ref(false);
 const deleteError = ref("");
+let cronDescriptionTimer;
+let cronDescriptionRequest = 0;
 
 function emptySchedule() {
   return { name: "", image: "", cmd: "", parameters: "", cron_rule: "0 0 * * *", active: true, singleton: false, credential: null, cpu: null, memory: null };
@@ -104,6 +110,30 @@ function sourceIcon(sourceName) {
   return sourceName === "GitHub" || sourceName === "GitLab" ? GitBranch : Container;
 }
 function credentialScheduleCount(credentialId) { return collections.value.schedules.filter((schedule) => schedule.credential === credentialId).length; }
+
+function queueCronDescription(cronRule, enabled) {
+  window.clearTimeout(cronDescriptionTimer);
+  const requestId = ++cronDescriptionRequest;
+  cronDescription.value = "";
+  cronDescriptionError.value = "";
+  describingCron.value = false;
+
+  if (!enabled || !cronRule.trim()) return;
+
+  cronDescriptionTimer = window.setTimeout(async () => {
+    describingCron.value = true;
+    try {
+      const result = await api.describeCron(cronRule);
+      if (requestId === cronDescriptionRequest) cronDescription.value = result.description;
+    } catch (err) {
+      if (requestId === cronDescriptionRequest) {
+        cronDescriptionError.value = err.status === 400 ? "Invalid cron expression" : "Unable to describe cron expression.";
+      }
+    } finally {
+      if (requestId === cronDescriptionRequest) describingCron.value = false;
+    }
+  }, 500);
+}
 
 function populateForm(resource, item) {
   editing[resource] = item;
@@ -213,11 +243,20 @@ watch(() => route.fullPath, () => {
   if (currentUser.value) syncRouteForm();
 });
 
+watch(
+  [() => scheduleForm.cron_rule, () => isForm("schedules"), currentUser],
+  ([cronRule, scheduleFormOpen, user]) => queueCronDescription(cronRule, scheduleFormOpen && Boolean(user)),
+  { immediate: true },
+);
+
 onMounted(() => {
   window.addEventListener("keydown", handleEscape);
   initialise();
 });
-onBeforeUnmount(() => window.removeEventListener("keydown", handleEscape));
+onBeforeUnmount(() => {
+  window.clearTimeout(cronDescriptionTimer);
+  window.removeEventListener("keydown", handleEscape);
+});
 </script>
 
 <template>
@@ -315,8 +354,13 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleEscape));
             </div>
             <div>
               <label class="form-label">Cron rule</label>
-              <input v-model="scheduleForm.cron_rule" class="form-control" required />
-              <span class="form-help">Use a five-part cron expression.</span>
+              <input v-model="scheduleForm.cron_rule" class="form-control" required aria-describedby="cron-rule-help cron-rule-description" />
+              <span id="cron-rule-help" class="form-help">Use a five-part cron expression.</span>
+              <span id="cron-rule-description" class="form-help min-h-6" aria-live="polite">
+                <span v-if="describingCron">Describing…</span>
+                <span v-else-if="cronDescriptionError" class="text-red-600">{{ cronDescriptionError }}</span>
+                <span v-else>{{ cronDescription }}</span>
+              </span>
             </div>
             <div>
               <label class="form-label">Env vars</label>
