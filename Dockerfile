@@ -1,17 +1,18 @@
+FROM ghcr.io/astral-sh/uv:0.11.26 AS uv
 FROM ubuntu:24.04
 
 # Install system dependencies and required packages
 #
-RUN apt-get update && apt-get -y install cron python3 python3-pip
-COPY requirements.txt /app/requirements.txt
+RUN apt-get update && apt-get -y install cron python3
+COPY --from=uv /uv /uvx /bin/
 WORKDIR /app
-RUN pip install --break-system-packages -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-dev
 
 # Copy and prepare django application
 #
 COPY . /app
 RUN mkdir /app/data
-RUN python3 manage.py collectstatic --noinput
 
 EXPOSE 8000
 CMD ["bin/default_docker_entrypoint.sh"]
