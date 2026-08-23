@@ -5,6 +5,7 @@ import os
 import cron_descriptor
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.db.models import Prefetch
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import permissions, serializers, viewsets
@@ -51,6 +52,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
     source_name = serializers.CharField(read_only=True)
     credential_name = serializers.CharField(source="credential.name", read_only=True)
     cron_rule = serializers.CharField(validators=[validate_cron_rule])
+    success_rate = serializers.SerializerMethodField()
 
     class Meta:
         model = Schedule
@@ -66,6 +68,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
             "active",
             "singleton",
             "sequential_failures",
+            "success_rate",
             "env_vars",
             "image",
             "source_name",
@@ -75,6 +78,17 @@ class ScheduleSerializer(serializers.ModelSerializer):
             "memory",
         ]
         read_only_fields = ["id", "created_at", "created_by", "sequential_failures"]
+
+    def get_success_rate(self, schedule):
+        executions = getattr(schedule, "recent_executions", None)
+        if executions is None:
+            executions = list(
+                schedule.job_set.filter(status_code__isnull=False).order_by("-created_at")[:1000]
+            )
+        if not executions:
+            return 0.0
+        successful = sum(job.status_code == 0 for job in executions)
+        return round((successful / len(executions)) * 100, 2)
 
 
 class JobSerializer(serializers.ModelSerializer):
@@ -144,7 +158,17 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class ScheduleViewSet(viewsets.ModelViewSet):
-    queryset = Schedule.objects.select_related("credential", "created_by").order_by("name")
+    queryset = (
+        Schedule.objects.select_related("credential", "created_by")
+        .prefetch_related(
+            Prefetch(
+                "job_set",
+                queryset=Job.objects.filter(status_code__isnull=False).order_by("-created_at")[:1000],
+                to_attr="recent_executions",
+            )
+        )
+        .order_by("name")
+    )
     serializer_class = ScheduleSerializer
 
     def perform_create(self, serializer):

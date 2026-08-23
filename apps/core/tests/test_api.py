@@ -1,10 +1,12 @@
 import shutil
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
-from apps.core.models import Credential, Schedule
+from apps.core.models import Credential, Job, Schedule
 
 User = get_user_model()
 
@@ -27,6 +29,7 @@ class TestScheduleApi(ApiTestCase):
         self.assertEqual(response.status_code, 201)
         schedule_id = response.json()["id"]
         self.assertEqual(response.json()["created_by"], "testuser")
+        self.assertEqual(response.json()["success_rate"], 0.0)
         self.assertTrue((settings.CRONTAB_PATH / f"ct_{schedule_id}").exists())
 
         response = self.client.get("/api/schedules/")
@@ -54,6 +57,35 @@ class TestScheduleApi(ApiTestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertIn("cron_rule", response.json())
+
+    def test_success_rate_uses_the_latest_1000_completed_executions(self):
+        schedule = Schedule.objects.create(
+            name="measured",
+            image="alpine:latest",
+            cron_rule="0 0 * * *",
+            created_by=self.user,
+        )
+        now = timezone.now()
+        jobs = [
+            Job(schedule=schedule, status="exited", status_code=0, created_at=now - timedelta(seconds=1002)),
+            Job(schedule=schedule, status="exited", status_code=0, created_at=now - timedelta(seconds=1001)),
+        ]
+        jobs.extend(
+            Job(
+                schedule=schedule,
+                status="exited",
+                status_code=0 if index < 250 else 1,
+                created_at=now - timedelta(seconds=1000 - index),
+            )
+            for index in range(1000)
+        )
+        Job.objects.bulk_create(jobs)
+        Job.objects.create(schedule=schedule, status="running", status_code=None, created_at=now + timedelta(seconds=1))
+
+        response = self.client.get(f"/api/schedules/{schedule.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["success_rate"], 25.0)
 
 
 class TestCredentialApi(ApiTestCase):
