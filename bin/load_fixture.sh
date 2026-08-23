@@ -1,0 +1,1 @@
+uv run --no-sync python manage.py loaddata ./apps/core/fixtures/schedules.yaml

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 uv run --no-sync python manage.py migrate
-uv run --no-sync python manage.py loaddata ./apps/core/fixtures/schedules.yaml
 uv run --no-sync python manage.py setup
 
 uv run --no-sync python manage.py update_history &
