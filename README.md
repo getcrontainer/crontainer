@@ -31,6 +31,7 @@ For the production deployment, run `docker compose up --build`. A single contain
 
 The API uses cookie-based session authentication. Fetch `/api/auth/csrf/` before signing in with `POST /api/auth/login/`, then use `/api/auth/me/` to obtain the current user. The main resources are exposed at:
 
+- `/api/health/` (public system health)
 - `/api/schedules/`
 - `/api/jobs/` (read-only)
 - `/api/credentials/`

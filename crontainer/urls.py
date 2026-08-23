@@ -12,6 +12,7 @@ from apps.core.api import (
     csrf,
     current_user,
     describe_cron,
+    health,
     login_view,
     logout_view,
 )
@@ -25,6 +26,7 @@ router.register("users", UserViewSet)
 router.register("nodes", NodeViewSet)
 
 urlpatterns = [
+    path("api/health/", health, name="health"),
     path("api/auth/csrf/", csrf, name="csrf"),
     path("api/auth/login/", login_view, name="api-login"),
     path("api/auth/logout/", logout_view, name="api-logout"),

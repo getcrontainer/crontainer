@@ -22,6 +22,10 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, ["*"]),
     CRONJOB_CMD=(str, "{cron_rule}\troot\tcd /app && /app/.venv/bin/python /app/manage.py run_schedule {schedule_id}"),
     CRONTAB_PATH=(str, "/tmp/cron.d"),
+    CRON_PID_FILE=(str, "/run/crond.pid"),
+    JOB_UPDATER_PID_FILE=(str, "/run/crontainer-update-history.pid"),
+    HEALTH_DISK_PATH=(str, str(BASE_DIR / "data")),
+    HEALTH_DISK_MAX_USED_PERCENT=(float, 80.0),
     CSRF_TRUSTED_ORIGINS=(list, []),
     SESSION_KEY=(str, "django-insecure-t(=_djgy021(tvq%doh+u(v*#lz0zx8lc6i93!u5hfo$ce!z2b"),
 )
@@ -136,6 +140,10 @@ WHITENOISE_MAX_AGE = 31_536_000
 
 CRONTAB_PATH = Path(env("CRONTAB_PATH"))
 CRONJOB_CMD = env("CRONJOB_CMD")
+CRON_PID_FILE = Path(env("CRON_PID_FILE"))
+JOB_UPDATER_PID_FILE = Path(env("JOB_UPDATER_PID_FILE"))
+HEALTH_DISK_PATH = Path(env("HEALTH_DISK_PATH"))
+HEALTH_DISK_MAX_USED_PERCENT = env("HEALTH_DISK_MAX_USED_PERCENT")
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],

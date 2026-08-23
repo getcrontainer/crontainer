@@ -4,5 +4,6 @@ uv run --no-sync python manage.py migrate
 uv run --no-sync python manage.py setup
 
 uv run --no-sync python manage.py update_history &
+echo $! > "${JOB_UPDATER_PID_FILE:-/run/crontainer-update-history.pid}"
 
 cron && uv run --no-sync gunicorn crontainer.wsgi -w 2 --bind 0.0.0.0:8000 --workers=4 --threads 3
