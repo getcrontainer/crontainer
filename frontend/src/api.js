@@ -27,11 +27,12 @@ export async function request(path, options = {}) {
 export const api = {
   csrf: () => request("/api/auth/csrf/"),
   currentUser: () => request("/api/auth/me/"),
+  dashboardSummary: () => request("/api/dashboard/summary/"),
   describeCron: (cronRule) => request(`/api/describe-cron/?cron_rule=${encodeURIComponent(cronRule)}`),
   health: () => request("/api/health/"),
   login: (credentials) => request("/api/auth/login/", { method: "POST", body: JSON.stringify(credentials) }),
   logout: () => request("/api/auth/logout/", { method: "POST" }),
-  list: (resource) => request(`/api/${resource}/`),
+  list: (resource, page) => request(page || `/api/${resource}/`),
   save: (resource, payload, id) => request(`/api/${resource}/${id ? `${id}/` : ""}`, {
     method: id ? "PATCH" : "POST",
     body: JSON.stringify(payload),

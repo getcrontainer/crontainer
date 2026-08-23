@@ -61,7 +61,7 @@ const HEALTH_POLL_INTERVAL_MS = 30_000;
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
-const { currentUser, loading, error, notice, saveError, collections } = storeToRefs(appStore);
+const { currentUser, loading, error, notice, saveError, collections, dashboardSummary, pagination } = storeToRefs(appStore);
 const activeTab = computed(() => route.meta.resource || "schedules");
 const mobileSidebarOpen = ref(false);
 const userMenuOpen = ref(false);
@@ -97,13 +97,10 @@ let cronDescriptionRequest = 0;
 let healthPollTimer;
 let healthRequestId = 0;
 
-const activeSchedules = computed(() => collections.value.schedules.filter((schedule) => schedule.active).length);
-const healthyJobs = computed(() => collections.value.jobs.filter((job) => {
-  const status = String(job.status || "").toLowerCase();
-  return status.includes("success") || status.includes("complete") || Number(job.status_code) === 0;
-}).length);
-const sshNodes = computed(() => collections.value.nodes.filter((node) => node.use_ssh).length);
-const adminUsers = computed(() => collections.value.users.filter((user) => user.is_superuser).length);
+const activeSchedules = computed(() => dashboardSummary.value.schedules.active);
+const healthyJobs = computed(() => dashboardSummary.value.jobs.healthy);
+const sshNodes = computed(() => dashboardSummary.value.nodes.ssh);
+const adminUsers = computed(() => dashboardSummary.value.users.administrators);
 const systemHealthState = computed(() => {
   if (healthError.value) return "unavailable";
   if (!systemHealth.value) return healthRefreshing.value ? "checking" : "unavailable";
@@ -358,7 +355,27 @@ function credentialPasswordLabel(category) {
 function sourceIcon(sourceName) {
   return sourceName === "GitHub" || sourceName === "GitLab" ? GitBranch : Container;
 }
-function credentialScheduleCount(credentialId) { return collections.value.schedules.filter((schedule) => schedule.credential === credentialId).length; }
+function collectionStatus(resource, singular, plural = `${singular}s`) {
+  const visible = visibleCollections.value[resource].length;
+  const loaded = collections.value[resource].length;
+  const total = pagination.value[resource].count;
+  if (searchQuery.value.trim()) return `${visible} matching ${visible === 1 ? singular : plural} in ${loaded} loaded`;
+  return `${loaded} of ${total} ${total === 1 ? singular : plural} loaded`;
+}
+function remainingItems(resource) {
+  return Math.max(0, pagination.value[resource].count - collections.value[resource].length);
+}
+function nextPageSize(resource) {
+  return Math.min(50, remainingItems(resource));
+}
+async function loadMore(resource) {
+  try {
+    await appStore.loadMore(resource);
+  } catch (err) {
+    error.value = err.message || `Unable to load more ${resource}.`;
+    notice.value = "";
+  }
+}
 
 async function copyJobLog() {
   if (!selectedJob.value?.log) return;
@@ -517,7 +534,7 @@ async function initialise() {
 
 async function refreshJobs() {
   try {
-    await appStore.load("jobs");
+    await Promise.all([appStore.load("jobs"), appStore.loadDashboardSummary()]);
   } catch (err) {
     error.value = err.message || "Unable to refresh jobs.";
     notice.value = "";
@@ -691,7 +708,7 @@ onBeforeUnmount(() => {
           <RouterLink :to="{ name: 'schedules' }" class="sidebar-brand brand-lockup"><span class="brand-icon"><Clock3 :size="21" aria-hidden="true" /></span><span>Crontainer</span></RouterLink>
           <div class="sidebar-label">Workspace</div>
           <ul class="sidebar-nav">
-            <li v-for="[key, label, icon] in navItems" :key="key"><RouterLink :to="{ name: listRouteNames[key] }" class="side-link" :class="{ 'side-link-active': activeTab === key }" @click="mobileSidebarOpen = false"><component :is="icon" :size="19" aria-hidden="true" /><span>{{ label }}</span><small>{{ collections[key].length }}</small></RouterLink></li>
+            <li v-for="[key, label, icon] in navItems" :key="key"><RouterLink :to="{ name: listRouteNames[key] }" class="side-link" :class="{ 'side-link-active': activeTab === key }" @click="mobileSidebarOpen = false"><component :is="icon" :size="19" aria-hidden="true" /><span>{{ label }}</span><small>{{ dashboardSummary[key].total }}</small></RouterLink></li>
           </ul>
           <div class="sidebar-spacer"></div>
           <div class="sidebar-label">Resources</div>
@@ -699,7 +716,7 @@ onBeforeUnmount(() => {
             <li><a href="https://github.com/getcrontainer/" target="_blank" rel="noreferrer"><BookOpen :size="18" aria-hidden="true" /><span>Documentation</span></a></li>
             <li><a href="https://github.com/getcrontainer/" target="_blank" rel="noreferrer"><GitFork :size="18" aria-hidden="true" /><span>GitHub</span></a></li>
           </ul>
-          <div class="sidebar-note"><Container :size="20" aria-hidden="true" /><div><strong>Ready to run</strong><span>{{ collections.nodes.length || 'Local' }} runtime {{ collections.nodes.length === 1 ? 'node' : 'nodes' }}</span></div><span class="status-dot"></span></div>
+          <div class="sidebar-note"><Container :size="20" aria-hidden="true" /><div><strong>Ready to run</strong><span>{{ dashboardSummary.nodes.total || 'Local' }} runtime {{ dashboardSummary.nodes.total === 1 ? 'node' : 'nodes' }}</span></div><span class="status-dot"></span></div>
         </div>
       </aside>
 
@@ -709,12 +726,12 @@ onBeforeUnmount(() => {
         <section v-if="isList('schedules')" class="resource-section">
           <header class="page-heading"><div><p class="eyebrow">Automation</p><h1>Schedules</h1><p>Every recurring workload, precisely timed and quietly under control.</p></div><RouterLink :to="{ name: 'schedule-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New schedule</RouterLink></header>
           <div class="metric-grid">
-            <article class="metric-card metric-featured"><div class="metric-icon"><CalendarClock :size="20" aria-hidden="true" /></div><div><span>Total schedules</span><strong>{{ collections.schedules.length }}</strong><small>configured automations</small></div></article>
-            <article class="metric-card"><div class="metric-icon"><Activity :size="20" aria-hidden="true" /></div><div><span>Active now</span><strong>{{ activeSchedules }}</strong><small>{{ collections.schedules.length - activeSchedules }} paused</small></div></article>
-            <article class="metric-card"><div class="metric-icon"><Monitor :size="20" aria-hidden="true" /></div><div><span>Runtime nodes</span><strong>{{ collections.nodes.length }}</strong><small>available targets</small></div></article>
+            <article class="metric-card metric-featured"><div class="metric-icon"><CalendarClock :size="20" aria-hidden="true" /></div><div><span>Total schedules</span><strong>{{ dashboardSummary.schedules.total }}</strong><small>configured automations</small></div></article>
+            <article class="metric-card"><div class="metric-icon"><Activity :size="20" aria-hidden="true" /></div><div><span>Active now</span><strong>{{ activeSchedules }}</strong><small>{{ dashboardSummary.schedules.total - activeSchedules }} paused</small></div></article>
+            <article class="metric-card"><div class="metric-icon"><Monitor :size="20" aria-hidden="true" /></div><div><span>Runtime nodes</span><strong>{{ dashboardSummary.nodes.total }}</strong><small>available targets</small></div></article>
           </div>
           <div class="data-panel not-format relative overflow-x-auto">
-            <div class="panel-heading"><div><h2>All schedules</h2><span>{{ visibleCollections.schedules.length }} {{ visibleCollections.schedules.length === 1 ? 'schedule' : 'schedules' }}</span></div><span class="panel-badge"><span class="status-dot"></span>Live</span></div>
+            <div class="panel-heading"><div><h2>All schedules</h2><span>{{ collectionStatus('schedules', 'schedule') }}</span></div><span class="panel-badge"><span class="status-dot"></span>Live</span></div>
             <table class="resource-table w-full text-sm text-left">
               <thead class="text-sm font-bold uppercase text-gray-400"><tr><th class="px-6 py-3">Name</th><th class="py-3 text-center">Active</th><th class="px-6 py-3 w-36">Success rate</th><th class="px-6 py-3 w-36">Cron Rule</th><th class="px-6 py-3">Source</th><th class="px-6 py-3">CPU</th><th class="px-6 py-3">Memory</th><th class="px-6 py-3">Owner</th><th class="px-6 py-3 w-36">Action</th></tr></thead>
               <tbody><tr v-for="schedule in visibleCollections.schedules" :key="schedule.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ schedule.name }}</div><div class="table-secondary">{{ schedule.id }}</div></td><td class="text-center"><span class="state-pill" :class="schedule.active ? 'state-active' : 'state-paused'"><span></span>{{ schedule.active ? 'Active' : 'Paused' }}</span></td><td class="px-6 py-4"><div class="success-rate" :class="successRateTone(schedule.success_rate)" :aria-label="`${formattedSuccessRate(schedule.success_rate)} success rate across the latest completed executions`"><div class="success-rate-value"><span class="success-rate-dot"></span><strong>{{ formattedSuccessRate(schedule.success_rate) }}</strong></div><div class="success-rate-track" aria-hidden="true"><span :style="{ width: `${normalizedSuccessRate(schedule.success_rate)}%` }"></span></div></div></td><td class="px-6 py-4"><code class="cron-code" :title="schedule.cron_description">{{ schedule.cron_rule }}</code></td><td class="px-6 py-4"><div class="flex items-center">
@@ -739,6 +756,7 @@ onBeforeUnmount(() => {
                 {{ schedule.image }}
               </div></td><td class="px-6 py-4"><span v-if="schedule.cpu">{{ schedule.cpu }}</span><Infinity v-else :size="18" aria-label="Unlimited" /></td><td class="px-6 py-4"><span v-if="schedule.memory">{{ schedule.memory }} MB</span><Infinity v-else :size="18" aria-label="Unlimited" /></td><td class="px-6 py-4">{{ schedule.created_by || 'system' }}</td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete schedule" @click="requestDelete('schedules', schedule)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'schedule-edit', params: { id: schedule.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit schedule"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody>
             </table>
+            <div v-if="pagination.schedules.next" class="load-more-bar"><button type="button" class="load-more-button" :disabled="pagination.schedules.loadingMore" @click="loadMore('schedules')">{{ pagination.schedules.loadingMore ? 'Loading…' : `Load ${nextPageSize('schedules')} more` }}</button><span>{{ collections.schedules.length }} of {{ pagination.schedules.count }} loaded</span></div>
           </div>
           <RouterLink :to="{ name: 'schedule-new' }" class="mobile-fab" aria-label="Add schedule"><Plus :size="25" aria-hidden="true" /></RouterLink>
         </section>
@@ -800,6 +818,7 @@ onBeforeUnmount(() => {
                 <option :value="null">---------</option>
                 <option v-for="credential in collections.credentials" :key="credential.id" :value="credential.id">{{ credential.name }}</option>
               </select>
+              <button v-if="pagination.credentials.next" type="button" class="form-load-more" :disabled="pagination.credentials.loadingMore" @click="loadMore('credentials')">{{ pagination.credentials.loadingMore ? 'Loading…' : `Load ${nextPageSize('credentials')} more credentials` }}</button>
               <p v-if="fieldError('schedules', 'credential')" class="form-field-error">{{ fieldError('schedules', 'credential') }}</p>
             </div>
             <div>
@@ -839,10 +858,14 @@ onBeforeUnmount(() => {
         <section v-if="isList('jobs')" class="resource-section">
           <header class="page-heading"><div><p class="eyebrow">Execution history</p><h1>Jobs</h1><p>A clear, chronological view of every container run.</p></div></header>
           <div class="metric-grid metric-grid-compact">
-            <article class="metric-card metric-featured"><div class="metric-icon"><Activity :size="20" aria-hidden="true" /></div><div><span>Total runs</span><strong>{{ collections.jobs.length }}</strong><small>recorded executions</small></div></article>
+            <article class="metric-card metric-featured"><div class="metric-icon"><Activity :size="20" aria-hidden="true" /></div><div><span>Total runs</span><strong>{{ dashboardSummary.jobs.total }}</strong><small>recorded executions</small></div></article>
             <article class="metric-card"><div class="metric-icon"><Check :size="20" aria-hidden="true" /></div><div><span>Healthy runs</span><strong>{{ healthyJobs }}</strong><small>completed successfully</small></div></article>
           </div>
-          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Recent activity</h2><span>{{ visibleCollections.jobs.length }} recorded runs</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all jobs" /></th><th class="px-6 py-3">Id</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Schedule</th><th class="px-6 py-3">Cron rule</th><th class="px-6 py-3">Started at</th><th class="px-6 py-3">Duration</th><th class="px-6 py-3">Log</th></tr></thead><tbody><tr v-for="job in visibleCollections.jobs" :key="job.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select job ${job.id}`" /></td><td class="px-6 py-4 whitespace-nowrap"><span class="table-secondary">{{ job.id }}</span></td><td class="px-6 py-4"><span class="state-pill" :class="Number(job.status_code) === 0 ? 'state-active' : 'state-paused'"><span></span>{{ job.status || 'Unknown' }}</span></td><td class="px-6 py-4"><span class="table-primary">{{ job.schedule_name }}</span></td><td class="px-6 py-4"><code class="cron-code">{{ job.schedule_cron_rule || '—' }}</code></td><td class="px-6 py-4">{{ new Date(job.created_at).toLocaleString() }}</td><td class="px-6 py-4">{{ job.duration }}s</td><td class="px-6 py-4"><RouterLink :to="{ name: 'job-log', params: { id: job.id } }" class="btn-mini-edit" :aria-label="`Open log for job ${job.id}`"><Logs :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div>
+          <div class="data-panel not-format relative overflow-x-auto">
+            <div class="panel-heading"><div><h2>Recent activity</h2><span>{{ collectionStatus('jobs', 'run') }}</span></div></div>
+            <table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all jobs" /></th><th class="px-6 py-3">Id</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Schedule</th><th class="px-6 py-3">Cron rule</th><th class="px-6 py-3">Started at</th><th class="px-6 py-3">Duration</th><th class="px-6 py-3">Log</th></tr></thead><tbody><tr v-for="job in visibleCollections.jobs" :key="job.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select job ${job.id}`" /></td><td class="px-6 py-4 whitespace-nowrap"><span class="table-secondary">{{ job.id }}</span></td><td class="px-6 py-4"><span class="state-pill" :class="Number(job.status_code) === 0 ? 'state-active' : 'state-paused'"><span></span>{{ job.status || 'Unknown' }}</span></td><td class="px-6 py-4"><span class="table-primary">{{ job.schedule_name }}</span></td><td class="px-6 py-4"><code class="cron-code">{{ job.schedule_cron_rule || '—' }}</code></td><td class="px-6 py-4">{{ new Date(job.created_at).toLocaleString() }}</td><td class="px-6 py-4">{{ job.duration }}s</td><td class="px-6 py-4"><RouterLink :to="{ name: 'job-log', params: { id: job.id } }" class="btn-mini-edit" :aria-label="`Open log for job ${job.id}`"><Logs :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table>
+            <div v-if="pagination.jobs.next" class="load-more-bar"><button type="button" class="load-more-button" :disabled="pagination.jobs.loadingMore" @click="loadMore('jobs')">{{ pagination.jobs.loadingMore ? 'Loading…' : `Load ${nextPageSize('jobs')} more` }}</button><span>{{ collections.jobs.length }} of {{ pagination.jobs.count }} loaded</span></div>
+          </div>
         </section>
 
         <section v-if="isJobLog()" class="resource-section job-log-view">
@@ -878,7 +901,12 @@ onBeforeUnmount(() => {
 
         <section v-if="isList('credentials')" class="resource-section">
           <header class="page-heading"><div><p class="eyebrow">Secure access</p><h1>Credentials</h1><p>Private connection details, organized without exposing what matters.</p></div><RouterLink :to="{ name: 'credential-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New credential</RouterLink></header>
-          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Credential vault</h2><span>{{ visibleCollections.credentials.length }} secure connections</span></div><span class="panel-badge panel-badge-neutral"><LockKeyhole :size="13" aria-hidden="true" />Encrypted</span></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3">Name</th><th class="px-6 py-3">Provider</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Schedules</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="credential in visibleCollections.credentials" :key="credential.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ credential.name }}</div></td><td class="px-6 py-4"><span class="provider-chip"><KeyRound :size="14" aria-hidden="true" />{{ categoryName(credential.category) }}</span></td><td class="px-6 py-4">{{ credential.username || 'Token only' }}</td><td class="px-6 py-4"><span class="count-chip">{{ credentialScheduleCount(credential.id) }}</span></td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete credential" @click="requestDelete('credentials', credential)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'credential-edit', params: { id: credential.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit credential"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'credential-new' }" class="mobile-fab" aria-label="Add credential"><Plus :size="25" aria-hidden="true" /></RouterLink>
+          <div class="data-panel not-format relative overflow-x-auto">
+            <div class="panel-heading"><div><h2>Credential vault</h2><span>{{ collectionStatus('credentials', 'connection') }}</span></div><span class="panel-badge panel-badge-neutral"><LockKeyhole :size="13" aria-hidden="true" />Encrypted</span></div>
+            <table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3">Name</th><th class="px-6 py-3">Provider</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Schedules</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="credential in visibleCollections.credentials" :key="credential.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ credential.name }}</div></td><td class="px-6 py-4"><span class="provider-chip"><KeyRound :size="14" aria-hidden="true" />{{ categoryName(credential.category) }}</span></td><td class="px-6 py-4">{{ credential.username || 'Token only' }}</td><td class="px-6 py-4"><span class="count-chip">{{ credential.schedule_count }}</span></td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete credential" @click="requestDelete('credentials', credential)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'credential-edit', params: { id: credential.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit credential"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table>
+            <div v-if="pagination.credentials.next" class="load-more-bar"><button type="button" class="load-more-button" :disabled="pagination.credentials.loadingMore" @click="loadMore('credentials')">{{ pagination.credentials.loadingMore ? 'Loading…' : `Load ${nextPageSize('credentials')} more` }}</button><span>{{ collections.credentials.length }} of {{ pagination.credentials.count }} loaded</span></div>
+          </div>
+          <RouterLink :to="{ name: 'credential-new' }" class="mobile-fab" aria-label="Add credential"><Plus :size="25" aria-hidden="true" /></RouterLink>
         </section>
         <div v-if="isForm('credentials')" :class="{ 'modal-backdrop': isModal('credentials') }">
         <section class="form-card" :class="{ 'modal-card': isModal('credentials') }" :role="isModal('credentials') ? 'dialog' : undefined" :aria-modal="isModal('credentials') || undefined" aria-labelledby="credential-form-title">
@@ -923,8 +951,13 @@ onBeforeUnmount(() => {
 
         <section v-if="isList('nodes')" class="resource-section">
           <header class="page-heading"><div><p class="eyebrow">Infrastructure</p><h1>Nodes</h1><p>The runtime destinations where your scheduled work comes alive.</p></div><RouterLink :to="{ name: 'node-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New node</RouterLink></header>
-          <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Monitor :size="20" aria-hidden="true" /></div><div><span>Runtime nodes</span><strong>{{ collections.nodes.length }}</strong><small>configured endpoints</small></div></article><article class="metric-card"><div class="metric-icon"><LockKeyhole :size="20" aria-hidden="true" /></div><div><span>SSH secured</span><strong>{{ sshNodes }}</strong><small>encrypted connections</small></div></article></div>
-          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Connected infrastructure</h2><span>{{ visibleCollections.nodes.length }} runtime targets</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all nodes" /></th><th class="px-6 py-3">Name</th><th class="px-6 py-3">Host</th><th class="px-6 py-3">Port</th><th class="px-6 py-3">Connection</th><th class="px-6 py-3">Secret</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="node in visibleCollections.nodes" :key="node.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select node ${node.name}`" /></td><td class="px-6 py-4 whitespace-nowrap"><div class="table-primary">{{ node.name }}</div></td><td class="px-6 py-4"><code class="host-code">{{ node.host }}</code></td><td class="px-6 py-4">{{ node.port }}</td><td class="px-6 py-4"><span class="provider-chip"><LockKeyhole v-if="node.use_ssh" :size="14" aria-hidden="true" /><Monitor v-else :size="14" aria-hidden="true" />{{ node.use_ssh ? 'SSH' : 'Direct' }}</span></td><td class="px-6 py-4"><span class="secret-value">••••••••</span></td><td class="px-6 py-4"><button class="btn-mini-remove" aria-label="Delete node" @click="requestDelete('nodes', node)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'node-edit', params: { id: node.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit node"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'node-new' }" class="mobile-fab" aria-label="Add node"><Plus :size="25" aria-hidden="true" /></RouterLink>
+          <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Monitor :size="20" aria-hidden="true" /></div><div><span>Runtime nodes</span><strong>{{ dashboardSummary.nodes.total }}</strong><small>configured endpoints</small></div></article><article class="metric-card"><div class="metric-icon"><LockKeyhole :size="20" aria-hidden="true" /></div><div><span>SSH secured</span><strong>{{ sshNodes }}</strong><small>encrypted connections</small></div></article></div>
+          <div class="data-panel not-format relative overflow-x-auto">
+            <div class="panel-heading"><div><h2>Connected infrastructure</h2><span>{{ collectionStatus('nodes', 'target') }}</span></div></div>
+            <table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all nodes" /></th><th class="px-6 py-3">Name</th><th class="px-6 py-3">Host</th><th class="px-6 py-3">Port</th><th class="px-6 py-3">Connection</th><th class="px-6 py-3">Secret</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="node in visibleCollections.nodes" :key="node.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select node ${node.name}`" /></td><td class="px-6 py-4 whitespace-nowrap"><div class="table-primary">{{ node.name }}</div></td><td class="px-6 py-4"><code class="host-code">{{ node.host }}</code></td><td class="px-6 py-4">{{ node.port }}</td><td class="px-6 py-4"><span class="provider-chip"><LockKeyhole v-if="node.use_ssh" :size="14" aria-hidden="true" /><Monitor v-else :size="14" aria-hidden="true" />{{ node.use_ssh ? 'SSH' : 'Direct' }}</span></td><td class="px-6 py-4"><span class="secret-value">••••••••</span></td><td class="px-6 py-4"><button class="btn-mini-remove" aria-label="Delete node" @click="requestDelete('nodes', node)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'node-edit', params: { id: node.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit node"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table>
+            <div v-if="pagination.nodes.next" class="load-more-bar"><button type="button" class="load-more-button" :disabled="pagination.nodes.loadingMore" @click="loadMore('nodes')">{{ pagination.nodes.loadingMore ? 'Loading…' : `Load ${nextPageSize('nodes')} more` }}</button><span>{{ collections.nodes.length }} of {{ pagination.nodes.count }} loaded</span></div>
+          </div>
+          <RouterLink :to="{ name: 'node-new' }" class="mobile-fab" aria-label="Add node"><Plus :size="25" aria-hidden="true" /></RouterLink>
         </section>
         <div v-if="isForm('nodes')" :class="{ 'modal-backdrop': isModal('nodes') }">
         <section class="form-card" :class="{ 'modal-card': isModal('nodes') }" :role="isModal('nodes') ? 'dialog' : undefined" :aria-modal="isModal('nodes') || undefined" aria-labelledby="node-form-title">
@@ -964,8 +997,13 @@ onBeforeUnmount(() => {
 
         <section v-if="isList('users')" class="resource-section">
           <header class="page-heading"><div><p class="eyebrow">Access control</p><h1>Users</h1><p>Manage the people trusted with your Crontainer workspace.</p></div><RouterLink :to="{ name: 'user-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />Invite user</RouterLink></header>
-          <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Users :size="20" aria-hidden="true" /></div><div><span>Total users</span><strong>{{ collections.users.length }}</strong><small>workspace accounts</small></div></article><article class="metric-card"><div class="metric-icon"><KeyRound :size="20" aria-hidden="true" /></div><div><span>Administrators</span><strong>{{ adminUsers }}</strong><small>elevated access</small></div></article></div>
-          <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Workspace members</h2><span>{{ visibleCollections.users.length }} people with access</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3">Name / Email</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Joined</th><th class="px-6 py-3">Last login</th><th class="px-6 py-3">Role</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="user in visibleCollections.users" :key="user.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username }}</div><div class="table-secondary">{{ user.email || 'No email set' }}</div></td><td class="px-6 py-4">{{ user.username }}</td><td class="px-6 py-4">{{ user.date_joined ? new Date(user.date_joined).toLocaleDateString() : '—' }}</td><td class="px-6 py-4">{{ user.last_login ? new Date(user.last_login).toLocaleString() : 'Never' }}</td><td class="px-6 py-4"><span class="provider-chip"><Check v-if="user.is_superuser" :size="14" aria-hidden="true" />{{ user.is_superuser ? 'Administrator' : 'Member' }}</span></td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete user" @click="requestDelete('users', user)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'user-edit', params: { id: user.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit user"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'user-new' }" class="mobile-fab" aria-label="Add user"><Plus :size="25" aria-hidden="true" /></RouterLink>
+          <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Users :size="20" aria-hidden="true" /></div><div><span>Total users</span><strong>{{ dashboardSummary.users.total }}</strong><small>workspace accounts</small></div></article><article class="metric-card"><div class="metric-icon"><KeyRound :size="20" aria-hidden="true" /></div><div><span>Administrators</span><strong>{{ adminUsers }}</strong><small>elevated access</small></div></article></div>
+          <div class="data-panel not-format relative overflow-x-auto">
+            <div class="panel-heading"><div><h2>Workspace members</h2><span>{{ collectionStatus('users', 'person', 'people') }}</span></div></div>
+            <table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3">Name / Email</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Joined</th><th class="px-6 py-3">Last login</th><th class="px-6 py-3">Role</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="user in visibleCollections.users" :key="user.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username }}</div><div class="table-secondary">{{ user.email || 'No email set' }}</div></td><td class="px-6 py-4">{{ user.username }}</td><td class="px-6 py-4">{{ user.date_joined ? new Date(user.date_joined).toLocaleDateString() : '—' }}</td><td class="px-6 py-4">{{ user.last_login ? new Date(user.last_login).toLocaleString() : 'Never' }}</td><td class="px-6 py-4"><span class="provider-chip"><Check v-if="user.is_superuser" :size="14" aria-hidden="true" />{{ user.is_superuser ? 'Administrator' : 'Member' }}</span></td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete user" @click="requestDelete('users', user)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'user-edit', params: { id: user.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit user"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table>
+            <div v-if="pagination.users.next" class="load-more-bar"><button type="button" class="load-more-button" :disabled="pagination.users.loadingMore" @click="loadMore('users')">{{ pagination.users.loadingMore ? 'Loading…' : `Load ${nextPageSize('users')} more` }}</button><span>{{ collections.users.length }} of {{ pagination.users.count }} loaded</span></div>
+          </div>
+          <RouterLink :to="{ name: 'user-new' }" class="mobile-fab" aria-label="Add user"><Plus :size="25" aria-hidden="true" /></RouterLink>
         </section>
         <div v-if="isForm('users')" :class="{ 'modal-backdrop': isModal('users') }">
         <section class="form-card" :class="{ 'modal-card': isModal('users') }" :role="isModal('users') ? 'dialog' : undefined" :aria-modal="isModal('users') || undefined" aria-labelledby="user-form-title">

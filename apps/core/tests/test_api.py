@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from apps.core.models import Credential, Job, Schedule
+from apps.node.models import Node
 
 User = get_user_model()
 
@@ -34,7 +35,7 @@ class TestScheduleApi(ApiTestCase):
 
         response = self.client.get("/api/schedules/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()[0]["name"], "nightly")
+        self.assertEqual(response.json()["results"][0]["name"], "nightly")
 
         response = self.client.patch(
             f"/api/schedules/{schedule_id}/",
@@ -102,6 +103,7 @@ class TestCredentialApi(ApiTestCase):
         )
         self.assertEqual(response.status_code, 201)
         self.assertNotIn("password", response.json())
+        self.assertEqual(response.json()["schedule_count"], 0)
         self.assertEqual(Credential.objects.get(name="hub").password, "secret")
 
 
@@ -118,3 +120,43 @@ class TestAuthAndUtilityApi(ApiTestCase):
         response = self.client.get("/api/describe-cron/?cron_rule=%2F5+0+*+*+*")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["description"], "Invalid cron expression")
+
+
+class TestPagination(ApiTestCase):
+    def test_all_resource_lists_use_standard_pagination(self):
+        for endpoint in ["schedules", "jobs", "credentials", "users", "nodes"]:
+            with self.subTest(endpoint=endpoint):
+                response = self.client.get(f"/api/{endpoint}/")
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(set(response.json()), {"count", "next", "previous", "results"})
+
+    def test_resource_pages_contain_at_most_50_items(self):
+        Credential.objects.bulk_create(Credential(name=f"credential-{index}", password="secret") for index in range(51))
+
+        first_page = self.client.get("/api/credentials/")
+        second_page = self.client.get("/api/credentials/?page=2")
+
+        self.assertEqual(first_page.json()["count"], 51)
+        self.assertEqual(len(first_page.json()["results"]), 50)
+        self.assertIsNotNone(first_page.json()["next"])
+        self.assertEqual(len(second_page.json()["results"]), 1)
+        self.assertIsNotNone(second_page.json()["previous"])
+
+    def test_dashboard_summary_uses_all_records(self):
+        active_schedule = Schedule.objects.create(name="active", image="alpine", cron_rule="0 0 * * *")
+        Schedule.objects.create(name="paused", image="alpine", cron_rule="0 1 * * *", active=False)
+        Job.objects.create(schedule=active_schedule, status="exited", status_code=0)
+        Job.objects.create(schedule=active_schedule, status="failure", status_code=1)
+        Credential.objects.bulk_create(Credential(name=f"registry-{index}", password="secret") for index in range(51))
+        Node.objects.create(name="ssh", host="ssh.internal", port=22, use_ssh=True)
+        Node.objects.create(name="direct", host="docker.internal", port=2375, use_ssh=False)
+        User.objects.create_superuser(username="admin", password="admin-password")
+
+        response = self.client.get("/api/dashboard/summary/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["schedules"], {"total": 2, "active": 1})
+        self.assertEqual(response.json()["jobs"], {"total": 2, "healthy": 1})
+        self.assertEqual(response.json()["credentials"], {"total": 51})
+        self.assertEqual(response.json()["nodes"], {"total": 2, "ssh": 1})
+        self.assertEqual(response.json()["users"], {"total": 2, "administrators": 1})

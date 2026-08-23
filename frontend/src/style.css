@@ -328,6 +328,10 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .metric-featured strong { color: #fff; }
 .metric-featured small { color: #77787d; }
 .data-panel { border: 1px solid #e4e4e5; border-radius: 20px; background: rgb(255 255 255 / 88%); box-shadow: 0 12px 48px rgb(0 0 0 / 3.5%); }
+.load-more-bar { position: sticky; left: 0; display: flex; min-width: min(100%, 580px); min-height: 62px; align-items: center; justify-content: center; gap: 13px; border-top: 1px solid #ebebec; background: #fafaf9; }
+.load-more-bar > span { color: #99999e; font-size: 9px; font-weight: 560; }
+.load-more-button { min-height: 34px; border: 1px solid #dedee0; border-radius: 10px; padding: 0 13px; color: #414145; background: #fff; font-size: 10px; font-weight: 680; box-shadow: 0 2px 7px rgb(0 0 0 / 4%); transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+.load-more-button:hover:not(:disabled) { transform: translateY(-1px); border-color: #c9c9cc; box-shadow: 0 5px 13px rgb(0 0 0 / 7%); }
 .panel-heading { position: sticky; left: 0; display: flex; min-width: min(100%, 580px); min-height: 75px; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid #e9e9ea; padding: 0 21px; }
 .panel-heading > div { display: grid; gap: 4px; }
 .panel-heading h2 { margin: 0; color: #29292c; font-size: 14px; font-weight: 680; letter-spacing: -.012em; }
@@ -456,6 +460,8 @@ select.form-control { cursor: pointer; padding-right: 32px; }
 .form-label { display: block; margin: 0 0 7px; padding: 0; color: #424247; font-size: 11px; font-weight: 650; }
 .form-label::after { content: none; }
 .form-help { display: block; min-height: 0; padding: 5px 1px 0; color: #96969b; font-size: 10px; font-weight: 450; line-height: 1.45; }
+.form-load-more { margin-top: 7px; border: 0; padding: 2px 1px; color: #7a4a2f; background: transparent; font-size: 9px; font-weight: 650; }
+.form-load-more:hover:not(:disabled) { color: var(--accent-deep); }
 .form-field-error { margin: 6px 1px 0; color: #bd4e36; font-size: 10px; font-weight: 570; line-height: 1.4; }
 .form-check { display: inline-flex; cursor: pointer; align-items: center; gap: 9px; padding: 0; color: #3f3f43; font-size: 12px; font-weight: 620; }
 .form-actions { padding-top: 9px; text-align: right; }

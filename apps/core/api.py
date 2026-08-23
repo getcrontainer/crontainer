@@ -5,7 +5,7 @@ import os
 from cronsim import CronSimError
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch, Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import permissions, serializers, viewsets
@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from apps.core.cron import parse_cron_rule
 from apps.core.health import get_system_health
 from apps.core.models import Credential, Job, Schedule
+from apps.node.models import Node
 
 User = get_user_model()
 
@@ -35,10 +36,15 @@ def write_crontab(schedule: Schedule) -> None:
 
 class CredentialSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
+    schedule_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Credential
-        fields = ["id", "name", "username", "password", "category"]
+        fields = ["id", "name", "username", "password", "category", "schedule_count"]
+
+    def get_schedule_count(self, credential):
+        count = getattr(credential, "schedule_count", None)
+        return count if count is not None else credential.schedule_set.count()
 
     def validate(self, attrs):
         if self.instance is None and not attrs.get("password"):
@@ -190,7 +196,7 @@ class JobViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class CredentialViewSet(viewsets.ModelViewSet):
-    queryset = Credential.objects.order_by("name")
+    queryset = Credential.objects.annotate(schedule_count=Count("schedule")).order_by("name")
     serializer_class = CredentialSerializer
 
     def perform_destroy(self, instance):
@@ -214,6 +220,31 @@ def csrf(request):
 @permission_classes([permissions.AllowAny])
 def health(request):
     return Response(get_system_health())
+
+
+@api_view(["GET"])
+def dashboard_summary(request):
+    return Response(
+        {
+            "schedules": Schedule.objects.aggregate(
+                total=Count("id"),
+                active=Count("id", filter=Q(active=True)),
+            ),
+            "jobs": Job.objects.aggregate(
+                total=Count("id"),
+                healthy=Count("id", filter=Q(status_code=0)),
+            ),
+            "credentials": {"total": Credential.objects.count()},
+            "nodes": Node.objects.aggregate(
+                total=Count("id"),
+                ssh=Count("id", filter=Q(use_ssh=True)),
+            ),
+            "users": User.objects.aggregate(
+                total=Count("id"),
+                administrators=Count("id", filter=Q(is_superuser=True)),
+            ),
+        }
+    )
 
 
 @api_view(["POST"])

@@ -29,7 +29,7 @@ class TestNodeApi(TestCase):
 
         response = self.client.get("/api/nodes/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()[0]["name"], "worker-1")
+        self.assertEqual(response.json()["results"][0]["name"], "worker-1")
 
         response = self.client.delete(f"/api/nodes/{node_id}/")
         self.assertEqual(response.status_code, 204)
