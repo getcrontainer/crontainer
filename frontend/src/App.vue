@@ -11,6 +11,7 @@ import {
   Copy,
   GitBranch,
   GitFork,
+  HardDrive,
   Infinity,
   KeyRound,
   LockKeyhole,
@@ -49,6 +50,12 @@ const credentialProviders = [
 ];
 const cronFieldLabels = ["Minute", "Hour", "Day", "Month", "Weekday"];
 const listRouteNames = { schedules: "schedules", jobs: "jobs", credentials: "credentials", nodes: "nodes", users: "users" };
+const healthCheckDefinitions = [
+  ["cron", "Cron service", Clock3],
+  ["job_updater", "Job updater", Activity],
+  ["disk", "Disk capacity", HardDrive],
+];
+const HEALTH_POLL_INTERVAL_MS = 30_000;
 
 const route = useRoute();
 const router = useRouter();
@@ -60,6 +67,10 @@ const userMenuOpen = ref(false);
 const searchQuery = ref("");
 const searchInput = ref(null);
 const logCopied = ref(false);
+const systemHealth = ref(null);
+const healthError = ref("");
+const healthRefreshing = ref(false);
+const healthCheckedAt = ref(null);
 const loginForm = reactive({ username: "", password: "" });
 const editing = reactive({ schedules: null, credentials: null, users: null, nodes: null });
 const formErrors = reactive({
@@ -82,6 +93,8 @@ const deleting = ref(false);
 const deleteError = ref("");
 let cronDescriptionTimer;
 let cronDescriptionRequest = 0;
+let healthPollTimer;
+let healthRequestId = 0;
 
 const activeSchedules = computed(() => collections.value.schedules.filter((schedule) => schedule.active).length);
 const healthyJobs = computed(() => collections.value.jobs.filter((job) => {
@@ -90,6 +103,33 @@ const healthyJobs = computed(() => collections.value.jobs.filter((job) => {
 }).length);
 const sshNodes = computed(() => collections.value.nodes.filter((node) => node.use_ssh).length);
 const adminUsers = computed(() => collections.value.users.filter((user) => user.is_superuser).length);
+const systemHealthState = computed(() => {
+  if (healthError.value) return "unavailable";
+  if (!systemHealth.value) return healthRefreshing.value ? "checking" : "unavailable";
+  return systemHealth.value.healthy ? "healthy" : "unhealthy";
+});
+const systemHealthLabel = computed(() => ({
+  checking: "Checking system",
+  healthy: "System healthy",
+  unhealthy: "System needs attention",
+  unavailable: "Health unavailable",
+}[systemHealthState.value]));
+const healthCheckedAtLabel = computed(() => healthCheckedAt.value?.toLocaleTimeString([], {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+}) || "Not checked yet");
+const systemHealthChecks = computed(() => healthCheckDefinitions.map(([key, label, icon]) => {
+  const check = healthError.value ? null : systemHealth.value?.checks?.[key];
+  const status = ["healthy", "unhealthy"].includes(check?.status) ? check.status : "unknown";
+  let detail = "Status unavailable";
+  if (key === "disk" && Number.isFinite(Number(check?.used_percent))) {
+    detail = `${check.used_percent}% used · Keep below ${check.max_used_percent}%`;
+  } else if (key !== "disk" && status !== "unknown") {
+    detail = check.running ? "Running normally" : "Not running";
+  }
+  return { key, label, icon, status, detail };
+}));
 const userInitials = computed(() => {
   const user = currentUser.value;
   if (!user) return "CT";
@@ -478,6 +518,41 @@ async function refreshJobs() {
   }
 }
 
+async function refreshSystemHealth() {
+  const requestId = ++healthRequestId;
+  healthRefreshing.value = true;
+  try {
+    const result = await api.health();
+    if (requestId !== healthRequestId) return;
+    systemHealth.value = result;
+    healthError.value = "";
+  } catch (err) {
+    if (requestId !== healthRequestId) return;
+    healthError.value = err.message || "Unable to check system health.";
+  } finally {
+    if (requestId === healthRequestId) {
+      healthRefreshing.value = false;
+      healthCheckedAt.value = new Date();
+    }
+  }
+}
+
+function stopSystemHealthPolling() {
+  window.clearInterval(healthPollTimer);
+  healthPollTimer = undefined;
+  healthRequestId += 1;
+  healthRefreshing.value = false;
+  healthError.value = "";
+  systemHealth.value = null;
+  healthCheckedAt.value = null;
+}
+
+function startSystemHealthPolling() {
+  stopSystemHealthPolling();
+  refreshSystemHealth();
+  healthPollTimer = window.setInterval(refreshSystemHealth, HEALTH_POLL_INTERVAL_MS);
+}
+
 watch(() => route.fullPath, (_currentPath, previousPath) => {
   mobileSidebarOpen.value = false;
   userMenuOpen.value = false;
@@ -497,12 +572,22 @@ watch(
   { immediate: true },
 );
 
+watch(
+  currentUser,
+  (user) => {
+    if (user) startSystemHealthPolling();
+    else stopSystemHealthPolling();
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   window.addEventListener("keydown", handleEscape);
   initialise();
 });
 onBeforeUnmount(() => {
   window.clearTimeout(cronDescriptionTimer);
+  stopSystemHealthPolling();
   window.removeEventListener("keydown", handleEscape);
 });
 </script>
@@ -551,7 +636,33 @@ onBeforeUnmount(() => {
           </label>
         </div>
         <div class="topbar-actions">
-          <div class="system-status"><span class="status-dot"></span><span>System healthy</span></div>
+          <div class="system-health">
+            <button
+              type="button"
+              class="system-status"
+              :class="`system-status-${systemHealthState}`"
+              :aria-label="systemHealthLabel"
+              aria-describedby="system-health-popover"
+            >
+              <span class="status-dot" aria-hidden="true"></span>
+              <span class="system-status-label">{{ systemHealthLabel }}</span>
+            </button>
+            <div id="system-health-popover" class="system-health-popover" role="tooltip">
+              <header class="health-popover-header">
+                <span><strong>System health</strong><small>Checked {{ healthCheckedAtLabel }}</small></span>
+                <span class="health-summary" :class="`health-summary-${systemHealthState}`">{{ systemHealthState }}</span>
+              </header>
+              <p v-if="healthError" class="health-fetch-error">{{ healthError }}</p>
+              <ul class="health-check-list">
+                <li v-for="check in systemHealthChecks" :key="check.key" :class="`health-check-${check.status}`">
+                  <span class="health-check-icon"><component :is="check.icon" :size="16" aria-hidden="true" /></span>
+                  <span class="health-check-copy"><strong>{{ check.label }}</strong><small>{{ check.detail }}</small></span>
+                  <span class="health-check-state"><i aria-hidden="true"></i>{{ check.status }}</span>
+                </li>
+              </ul>
+              <footer><span class="status-dot" aria-hidden="true"></span>Refreshes automatically every 30 seconds</footer>
+            </div>
+          </div>
           <div class="relative">
             <button class="user-trigger" :aria-expanded="userMenuOpen" @click="userMenuOpen = !userMenuOpen"><span class="user-avatar">{{ userInitials }}</span><span class="user-name">{{ currentUser.first_name || currentUser.username }}</span><Settings :size="16" aria-hidden="true" /><span class="sr-only">Open user menu</span></button>
             <div v-if="userMenuOpen" class="user-popover">

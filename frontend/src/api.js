@@ -28,6 +28,7 @@ export const api = {
   csrf: () => request("/api/auth/csrf/"),
   currentUser: () => request("/api/auth/me/"),
   describeCron: (cronRule) => request(`/api/describe-cron/?cron_rule=${encodeURIComponent(cronRule)}`),
+  health: () => request("/api/health/"),
   login: (credentials) => request("/api/auth/login/", { method: "POST", body: JSON.stringify(credentials) }),
   logout: () => request("/api/auth/logout/", { method: "POST" }),
   list: (resource) => request(`/api/${resource}/`),
