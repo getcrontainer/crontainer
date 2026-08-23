@@ -82,9 +82,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
     def get_success_rate(self, schedule):
         executions = getattr(schedule, "recent_executions", None)
         if executions is None:
-            executions = list(
-                schedule.job_set.filter(status_code__isnull=False).order_by("-created_at")[:1000]
-            )
+            executions = list(schedule.job_set.filter(status_code__isnull=False).order_by("-created_at")[:1000])
         if not executions:
             return 0.0
         successful = sum(job.status_code == 0 for job in executions)

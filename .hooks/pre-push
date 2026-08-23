@@ -5,17 +5,11 @@ set -e
 echo "Running pre push hook!"
 repository_path=$(git rev-parse --show-toplevel)
 
-echo "Running black.."
-uv run black "$repository_path"/apps
+echo "Running Ruff lint checks.."
+uv run ruff check "$repository_path"
 
-echo "Running isort.."
-uv run isort "$repository_path"/apps
-
-echo "Running djlint"
-uv run djlint --check "$repository_path"/apps
-
-echo "Running pylint"
-uv run pylint .
+echo "Checking Ruff formatting.."
+uv run ruff format --check "$repository_path"
 
 echo "Running tests"
 export DJANGO_TEST=1
