@@ -52,6 +52,7 @@ const cronFieldLabels = ["Minute", "Hour", "Day", "Month", "Weekday"];
 const listRouteNames = { schedules: "schedules", jobs: "jobs", credentials: "credentials", nodes: "nodes", users: "users" };
 const healthCheckDefinitions = [
   ["cron", "Cron service", Clock3],
+  ["cron_files", "Cron definitions", CalendarClock],
   ["job_updater", "Job updater", Activity],
   ["disk", "Disk capacity", HardDrive],
 ];
@@ -122,13 +123,18 @@ const healthCheckedAtLabel = computed(() => healthCheckedAt.value?.toLocaleTimeS
 const systemHealthChecks = computed(() => healthCheckDefinitions.map(([key, label, icon]) => {
   const check = healthError.value ? null : systemHealth.value?.checks?.[key];
   const status = ["healthy", "unhealthy"].includes(check?.status) ? check.status : "unknown";
+  const missingFiles = Array.isArray(check?.missing_files) ? check.missing_files : [];
   let detail = "Status unavailable";
-  if (key === "disk" && Number.isFinite(Number(check?.used_percent))) {
+  if (key === "cron_files" && status !== "unknown") {
+    if (missingFiles.length) detail = `${missingFiles.length} of ${check.expected_count} files missing`;
+    else if (status === "healthy") detail = `All ${check.expected_count} schedule files present`;
+    else detail = "Unable to inspect cron files";
+  } else if (key === "disk" && Number.isFinite(Number(check?.used_percent))) {
     detail = `${check.used_percent}% used · Keep below ${check.max_used_percent}%`;
   } else if (key !== "disk" && status !== "unknown") {
     detail = check.running ? "Running normally" : "Not running";
   }
-  return { key, label, icon, status, detail };
+  return { key, label, icon, status, detail, missingFiles };
 }));
 const userInitials = computed(() => {
   const user = currentUser.value;
@@ -656,7 +662,12 @@ onBeforeUnmount(() => {
               <ul class="health-check-list">
                 <li v-for="check in systemHealthChecks" :key="check.key" :class="`health-check-${check.status}`">
                   <span class="health-check-icon"><component :is="check.icon" :size="16" aria-hidden="true" /></span>
-                  <span class="health-check-copy"><strong>{{ check.label }}</strong><small>{{ check.detail }}</small></span>
+                  <span class="health-check-copy">
+                    <strong>{{ check.label }}</strong><small>{{ check.detail }}</small>
+                    <span v-if="check.missingFiles.length" class="health-missing-files">
+                      <code v-for="filename in check.missingFiles" :key="filename">{{ filename }}</code>
+                    </span>
+                  </span>
                   <span class="health-check-state"><i aria-hidden="true"></i>{{ check.status }}</span>
                 </li>
               </ul>

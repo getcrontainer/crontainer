@@ -243,19 +243,21 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .health-summary-checking { color: #92651d; background: #fff7e8; }
 .health-fetch-error { margin: 0; border-bottom: 1px solid #f3d8d2; padding: 10px 16px; color: #a54b38; background: #fff5f2; font-size: 9px; line-height: 1.45; }
 .health-check-list { display: grid; gap: 0; margin: 0; padding: 6px; list-style: none; }
-.health-check-list li { display: grid; grid-template-columns: 35px minmax(0, 1fr) auto; align-items: center; gap: 10px; border-radius: 11px; padding: 9px 10px; }
-.health-check-list li:hover { background: #f7f7f5; }
-.health-check-icon { display: inline-flex; width: 33px; height: 33px; align-items: center; justify-content: center; border-radius: 10px; color: #65656a; background: #f0f0ef; }
+.health-check-list > li { display: grid; grid-template-columns: 35px minmax(0, 1fr) auto; align-items: start; gap: 10px; border-radius: 11px; padding: 9px 10px; }
+.health-check-list > li:hover { background: #f7f7f5; }
+.health-check-icon { display: inline-flex; width: 33px; height: 33px; align-items: center; justify-content: center; margin-top: 1px; border-radius: 10px; color: #65656a; background: #f0f0ef; }
 .health-check-copy { display: grid; min-width: 0; gap: 3px; }
 .health-check-copy strong { color: #38383c; font-size: 11px; font-weight: 650; }
 .health-check-copy small { overflow: hidden; color: #98989d; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.health-check-state { display: flex; align-items: center; gap: 5px; color: #8e8e93; font-size: 8px; font-weight: 700; text-transform: capitalize; }
+.health-check-state { display: flex; align-items: center; gap: 5px; margin-top: 7px; color: #8e8e93; font-size: 8px; font-weight: 700; text-transform: capitalize; }
 .health-check-state i { width: 5px; height: 5px; border-radius: 50%; background: #a7a7ab; }
 .health-check-healthy .health-check-state { color: #2e835d; }
 .health-check-healthy .health-check-state i { background: #31b774; }
 .health-check-unhealthy .health-check-icon { color: #b9523d; background: #fff0ec; }
 .health-check-unhealthy .health-check-state { color: #af4e39; }
 .health-check-unhealthy .health-check-state i { background: #dc6248; }
+.health-missing-files { display: grid; max-height: 112px; gap: 4px; overflow-y: auto; margin-top: 5px; padding-right: 3px; }
+.health-missing-files code { display: block; border-radius: 6px; padding: 4px 6px; color: #a44b38; background: #fff0ec; font-family: "SFMono-Regular", Consolas, monospace; font-size: 7px; line-height: 1.4; overflow-wrap: anywhere; }
 .system-health-popover footer { display: flex; align-items: center; gap: 7px; border-top: 1px solid #ececee; padding: 11px 16px 12px; color: #a0a0a5; font-size: 8px; font-weight: 550; }
 .system-health-popover footer .status-dot { width: 5px; height: 5px; background: #9b9ba0; box-shadow: none; }
 @keyframes health-pulse { 50% { opacity: .55; transform: scale(.78); } }
