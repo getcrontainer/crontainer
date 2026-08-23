@@ -1,6 +1,6 @@
 # Crontainer
 
-Crontainer schedules Docker containers with cron. The application is split into a Django REST Framework API and a separate Vue single-page application.
+Crontainer schedules Docker containers with cron. Django exposes the REST API and serves the compiled Vue single-page application with WhiteNoise.
 
 ## Run locally
 
@@ -25,7 +25,7 @@ pnpm dev
 
 Vite serves the frontend on `http://localhost:5173` and proxies `/api` requests to the Django API on port 8000.
 
-For the production-shaped stack, run `docker compose up --build`; nginx serves the SPA on `http://localhost:9090` and proxies `/api` to the API container.
+For the production deployment, run `docker compose up --build`. A single container builds the Vue frontend, serves the SPA and its static assets through Django, and exposes the complete application on `http://localhost:9090`.
 
 ## API
 
@@ -37,4 +37,4 @@ The API uses cookie-based session authentication. Fetch `/api/auth/csrf/` before
 - `/api/users/`
 - `/api/nodes/`
 
-The API has no server-rendered pages or Django templates.
+All non-API routes fall back to the Vue application so browser navigation and refreshes work with its client-side router.

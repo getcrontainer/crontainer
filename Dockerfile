@@ -1,3 +1,12 @@
+FROM node:22-alpine AS frontend-build
+
+WORKDIR /frontend
+RUN corepack enable
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY frontend/ ./
+RUN pnpm run build
+
 FROM ghcr.io/astral-sh/uv:0.11.26 AS uv
 FROM ubuntu:24.04
 
@@ -12,7 +21,8 @@ RUN uv sync --locked --no-dev
 # Copy and prepare django application
 #
 COPY . /app
-RUN mkdir /app/data
+COPY --from=frontend-build /frontend/dist /app/frontend/dist
+RUN mkdir -p /app/data /app/staticfiles \
+    && uv run --no-sync python manage.py collectstatic --noinput
 
-EXPOSE 8000
 CMD ["bin/default_docker_entrypoint.sh"]

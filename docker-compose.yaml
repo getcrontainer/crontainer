@@ -1,7 +1,9 @@
 services:
-  api:
-    container_name: crontainer-api
+  crontainer:
+    container_name: crontainer
     build: .
+    ports:
+      - "9090:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - crontainer-data:/app/data
@@ -10,14 +12,6 @@ services:
       CRONTAB_PATH: "/etc/cron.d"
       ADMIN_USERNAME: "admin"
       ADMIN_PASSWORD: "admin"
-
-  frontend:
-    container_name: crontainer-frontend
-    build: ./frontend
-    ports:
-      - "9090:80"
-    depends_on:
-      - api
 
 volumes:
   crontainer-data:

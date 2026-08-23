@@ -1,6 +1,7 @@
-"""URL configuration for the JSON-only Django API."""
+"""URL configuration for the Django API and Vue single-page application."""
 
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.generic import TemplateView
 from rest_framework.routers import DefaultRouter
 
 from apps.core.api import (
@@ -30,4 +31,5 @@ urlpatterns = [
     path("api/auth/me/", current_user, name="api-current-user"),
     path("api/describe-cron/", describe_cron, name="describe-cron"),
     path("api/", include(router.urls)),
+    re_path(r"^(?!api(?:/|$)|assets(?:/|$)).*$", TemplateView.as_view(template_name="index.html"), name="spa"),
 ]

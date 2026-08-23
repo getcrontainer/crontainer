@@ -1,5 +1,7 @@
 .venv
 node_modules
+frontend/node_modules
+frontend/dist
 cron.d
 .*
 data/db.sqlite3
