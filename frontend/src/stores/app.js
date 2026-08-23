@@ -8,6 +8,7 @@ export const useAppStore = defineStore("app", () => {
   const loading = ref(true);
   const error = ref("");
   const notice = ref("");
+  const saveError = ref(null);
   const collections = reactive({ schedules: [], jobs: [], credentials: [], users: [], nodes: [] });
 
   function message(text) {
@@ -23,6 +24,7 @@ export const useAppStore = defineStore("app", () => {
   function clearMessages() {
     error.value = "";
     notice.value = "";
+    saveError.value = null;
   }
 
   async function load(resource) {
@@ -79,7 +81,7 @@ export const useAppStore = defineStore("app", () => {
       message(`${resource.slice(0, -1)} saved.`);
       return true;
     } catch (err) {
-      failure(err);
+      saveError.value = err;
       return false;
     }
   }
@@ -109,6 +111,7 @@ export const useAppStore = defineStore("app", () => {
     loadAll,
     removeResource,
     saveResource,
+    saveError,
     signOut,
   };
 });

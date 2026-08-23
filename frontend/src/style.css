@@ -317,6 +317,15 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .state-active > span { background: #2ab973; }
 .state-paused { color: #a9543b; background: #fff0ea; }
 .state-paused > span { background: #ef7655; }
+.success-rate { --rate-color: #d76046; display: grid; width: 94px; gap: 7px; }
+.success-rate-value { display: flex; align-items: center; gap: 6px; color: #55555a; }
+.success-rate-value strong { color: #2a2a2d; font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 690; letter-spacing: -.015em; }
+.success-rate-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: var(--rate-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rate-color) 13%, transparent); }
+.success-rate-track { height: 4px; overflow: hidden; border-radius: 999px; background: #ececea; }
+.success-rate-track > span { display: block; min-width: 2px; height: 100%; border-radius: inherit; background: var(--rate-color); transition: width .35s ease; }
+.success-rate-high { --rate-color: #29a96b; }
+.success-rate-medium { --rate-color: #d79a36; }
+.success-rate-low { --rate-color: #d76046; }
 .provider-chip { padding: 6px 9px; color: #606065; background: #f2f2f1; }
 .count-chip { min-width: 26px; min-height: 26px; color: #5f5f64; background: #f2f2f1; }
 .resource-table input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; border: 1px solid #d2d2d5; border-radius: 5px; accent-color: #1d1d1f; }
@@ -395,14 +404,22 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 /* Forms and dialogs */
 .form-card { position: relative; width: min(100%, 760px); border: 1px solid rgb(0 0 0 / 8%); border-radius: 23px; padding: 34px; color: #252528; background: rgb(255 255 255 / 97%); box-shadow: 0 28px 90px rgb(0 0 0 / 20%); }
 .form-title { margin: 0 0 26px; padding-left: 45px; color: #1e1e21; font-size: 29px; font-weight: 660; letter-spacing: -.045em; line-height: 1.1; text-align: left; text-transform: none; }
+.form-error-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; align-items: start; margin: -7px 0 22px; border: 1px solid #f0c6bc; border-radius: 13px; padding: 12px 13px; color: #913d2a; background: #fff2ee; }
+.form-error-summary > span { display: inline-flex; width: 21px; height: 21px; align-items: center; justify-content: center; border-radius: 50%; color: white; background: #ca5b42; font-size: 11px; font-weight: 760; }
+.form-error-summary > div { display: grid; gap: 3px; }
+.form-error-summary strong { font-size: 11px; font-weight: 700; }
+.form-error-summary p { margin: 0; color: #ae5b47; font-size: 10px; line-height: 1.45; }
 .form-stack { display: grid; gap: 16px; }
 .form-control, form input.rounded-md.border-gray-300 { display: block; width: 100%; min-height: 44px; border: 1px solid #dcdcdf; border-radius: 11px; outline: none; background: #fafaf9; padding: 9px 12px; color: #252528; font-size: 13px; font-weight: 450; line-height: 1.3; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
 .form-control:focus, form input.rounded-md.border-gray-300:focus { border-color: #ff9b62; background: #fff; box-shadow: 0 0 0 4px rgb(255 107 24 / 9%); }
+.form-control.form-control-error, form input.form-control-error { border-color: #df806a; color: #752f20; background: #fff8f6; box-shadow: inset 0 0 0 1px rgb(223 128 106 / 8%); }
+.form-control.form-control-error:focus, form input.form-control-error:focus { border-color: #d35e43; background: #fff; box-shadow: 0 0 0 4px rgb(211 94 67 / 11%); }
 .form-control::placeholder, form input::placeholder { color: #acacb0; }
 select.form-control { cursor: pointer; padding-right: 32px; }
 .form-label { display: block; margin: 0 0 7px; padding: 0; color: #424247; font-size: 11px; font-weight: 650; }
 .form-label::after { content: none; }
 .form-help { display: block; min-height: 0; padding: 5px 1px 0; color: #96969b; font-size: 10px; font-weight: 450; line-height: 1.45; }
+.form-field-error { margin: 6px 1px 0; color: #bd4e36; font-size: 10px; font-weight: 570; line-height: 1.4; }
 .form-check { display: inline-flex; cursor: pointer; align-items: center; gap: 9px; padding: 0; color: #3f3f43; font-size: 12px; font-weight: 620; }
 .form-actions { padding-top: 9px; text-align: right; }
 .btn { display: inline-flex; min-height: 41px; align-items: center; justify-content: center; border: 0; border-radius: 11px; padding: 9px 16px; font-size: 12px; font-weight: 650; outline: none; transition: transform .15s ease, background .15s ease, box-shadow .15s ease; }

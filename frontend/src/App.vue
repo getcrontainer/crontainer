@@ -53,7 +53,7 @@ const listRouteNames = { schedules: "schedules", jobs: "jobs", credentials: "cre
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
-const { currentUser, loading, error, notice, collections } = storeToRefs(appStore);
+const { currentUser, loading, error, notice, saveError, collections } = storeToRefs(appStore);
 const activeTab = computed(() => route.meta.resource || "schedules");
 const mobileSidebarOpen = ref(false);
 const userMenuOpen = ref(false);
@@ -62,6 +62,12 @@ const searchInput = ref(null);
 const logCopied = ref(false);
 const loginForm = reactive({ username: "", password: "" });
 const editing = reactive({ schedules: null, credentials: null, users: null, nodes: null });
+const formErrors = reactive({
+  schedules: { fields: {}, general: [] },
+  credentials: { fields: {}, general: [] },
+  users: { fields: {}, general: [] },
+  nodes: { fields: {}, general: [] },
+});
 const scheduleForm = reactive(emptySchedule());
 const cronRuleParts = ref(scheduleForm.cron_rule.split(" "));
 const credentialForm = reactive(emptyCredential());
@@ -100,6 +106,24 @@ const visibleCollections = computed(() => {
     items.filter((item) => Object.values(item).some((value) => String(value ?? "").toLowerCase().includes(query))),
   ]));
 });
+
+function normalizedSuccessRate(value) {
+  const rate = Number(value);
+  return Number.isFinite(rate) ? Math.min(100, Math.max(0, rate)) : 0;
+}
+
+function formattedSuccessRate(value) {
+  const rate = normalizedSuccessRate(value);
+  return `${Number.isInteger(rate) ? rate : rate.toFixed(1)}%`;
+}
+
+function successRateTone(value) {
+  const rate = normalizedSuccessRate(value);
+  if (rate >= 90) return "success-rate-high";
+  if (rate >= 60) return "success-rate-medium";
+  return "success-rate-low";
+}
+
 const selectedJob = computed(() => {
   if (route.meta.resource !== "jobs" || route.meta.mode !== "log") return null;
   return collections.value.jobs.find((job) => String(job.id) === String(route.params.id)) || null;
@@ -216,8 +240,42 @@ function emptyCredential() { return { name: "", username: "", password: "", cate
 function emptyUser() { return { username: "", email: "", first_name: "", last_name: "", password: "" }; }
 function emptyNode() { return { name: "", host: "", port: 2375, use_ssh: false, secret: "" }; }
 function replace(target, source) { Object.assign(target, source); }
+function validationMessages(value) {
+  if (Array.isArray(value)) return value.flatMap(validationMessages);
+  if (value && typeof value === "object") return Object.values(value).flatMap(validationMessages);
+  return value === undefined || value === null || value === "" ? [] : [String(value)];
+}
+function clearFormErrors(resource) {
+  formErrors[resource].fields = {};
+  formErrors[resource].general = [];
+}
+function clearFieldError(resource, field) {
+  if (!(field in formErrors[resource].fields)) return;
+  const fields = { ...formErrors[resource].fields };
+  delete fields[field];
+  formErrors[resource].fields = fields;
+}
+function applyFormErrors(resource, apiError) {
+  clearFormErrors(resource);
+  const details = apiError?.details;
+  if (details && typeof details === "object" && !Array.isArray(details)) {
+    Object.entries(details).forEach(([field, value]) => {
+      const messages = validationMessages(value);
+      if (["detail", "non_field_errors"].includes(field)) formErrors[resource].general.push(...messages);
+      else if (messages.length) formErrors[resource].fields[field] = messages;
+    });
+  } else {
+    formErrors[resource].general = validationMessages(details || apiError?.message || "Unable to save this item.");
+  }
+}
+function fieldError(resource, field) { return formErrors[resource].fields[field]?.join(" ") || ""; }
+function formHasErrors(resource) { return formErrors[resource].general.length > 0 || Object.keys(formErrors[resource].fields).length > 0; }
+function formErrorSummary(resource) {
+  return formErrors[resource].general.join(" ") || "Review the highlighted fields and try again.";
+}
 function resetForm(resource) {
   editing[resource] = null;
+  clearFormErrors(resource);
   if (resource === "schedules") {
     replace(scheduleForm, emptySchedule());
     setCronRuleParts(scheduleForm.cron_rule);
@@ -271,6 +329,7 @@ function setCronRuleParts(cronRule) {
 function updateCronRulePart(index, value) {
   cronRuleParts.value[index] = value.replace(/\s/g, "");
   scheduleForm.cron_rule = cronRuleParts.value.join(" ");
+  clearFieldError("schedules", "cron_rule");
 }
 
 function queueCronDescription(cronRule, enabled) {
@@ -342,15 +401,20 @@ async function signOut() {
   finally { await router.replace({ name: "login" }); }
 }
 async function saveSchedule() {
+  clearFormErrors("schedules");
   const env_vars = Object.fromEntries(envRows.value.filter((row) => row.key).map((row) => [row.key, row.value]));
   if (await appStore.saveResource("schedules", { ...scheduleForm, env_vars }, editing.schedules?.id)) {
     closeForm("schedules");
+  } else {
+    applyFormErrors("schedules", saveError.value);
   }
 }
 async function save(resource, form) {
+  clearFormErrors(resource);
   const payload = { ...form };
   if (editing[resource] && !payload.password) delete payload.password;
   if (await appStore.saveResource(resource, payload, editing[resource]?.id)) closeForm(resource);
+  else applyFormErrors(resource, saveError.value);
 }
 function itemLabel(item) {
   return item.name || item.username || item.id;
@@ -405,12 +469,26 @@ async function initialise() {
   syncRouteForm();
 }
 
-watch(() => route.fullPath, () => {
+async function refreshJobs() {
+  try {
+    await appStore.load("jobs");
+  } catch (err) {
+    error.value = err.message || "Unable to refresh jobs.";
+    notice.value = "";
+  }
+}
+
+watch(() => route.fullPath, (_currentPath, previousPath) => {
   mobileSidebarOpen.value = false;
   userMenuOpen.value = false;
   searchQuery.value = "";
   logCopied.value = false;
-  if (currentUser.value) syncRouteForm();
+  if (currentUser.value) {
+    syncRouteForm();
+    const isInJobs = route.meta.resource === "jobs";
+    const wasInJobs = previousPath?.startsWith("/jobs");
+    if (isInJobs || wasInJobs) refreshJobs();
+  }
 });
 
 watch(
@@ -504,7 +582,7 @@ onBeforeUnmount(() => {
       </aside>
 
       <main class="app-content"><div class="app-surface">
-        <p v-if="notice" class="alert alert-success"><Check :size="18" aria-hidden="true" />{{ notice }}</p><p v-if="error" class="alert alert-error">{{ error }}</p>
+        <p v-if="notice" class="alert alert-success"><Check :size="18" aria-hidden="true" />{{ notice }}</p><p v-if="error && route.meta.mode !== 'form'" class="alert alert-error">{{ error }}</p>
 
         <section v-if="isList('schedules')" class="resource-section">
           <header class="page-heading"><div><p class="eyebrow">Automation</p><h1>Schedules</h1><p>Every recurring workload, precisely timed and quietly under control.</p></div><RouterLink :to="{ name: 'schedule-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New schedule</RouterLink></header>
@@ -516,8 +594,8 @@ onBeforeUnmount(() => {
           <div class="data-panel not-format relative overflow-x-auto">
             <div class="panel-heading"><div><h2>All schedules</h2><span>{{ visibleCollections.schedules.length }} {{ visibleCollections.schedules.length === 1 ? 'schedule' : 'schedules' }}</span></div><span class="panel-badge"><span class="status-dot"></span>Live</span></div>
             <table class="resource-table w-full text-sm text-left">
-              <thead class="text-sm font-bold uppercase text-gray-400"><tr><th class="px-6 py-3">Name</th><th class="py-3 text-center">Active</th><th class="px-6 py-3 w-36">Cron Rule</th><th class="px-6 py-3">Source</th><th class="px-6 py-3">CPU</th><th class="px-6 py-3">Memory</th><th class="px-6 py-3">Owner</th><th class="px-6 py-3 w-36">Action</th></tr></thead>
-              <tbody><tr v-for="schedule in visibleCollections.schedules" :key="schedule.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ schedule.name }}</div><div class="table-secondary">{{ schedule.id }}</div></td><td class="text-center"><span class="state-pill" :class="schedule.active ? 'state-active' : 'state-paused'"><span></span>{{ schedule.active ? 'Active' : 'Paused' }}</span></td><td class="px-6 py-4"><code class="cron-code" :title="schedule.cron_description">{{ schedule.cron_rule }}</code></td><td class="px-6 py-4"><div class="flex items-center">
+              <thead class="text-sm font-bold uppercase text-gray-400"><tr><th class="px-6 py-3">Name</th><th class="py-3 text-center">Active</th><th class="px-6 py-3 w-36">Success rate</th><th class="px-6 py-3 w-36">Cron Rule</th><th class="px-6 py-3">Source</th><th class="px-6 py-3">CPU</th><th class="px-6 py-3">Memory</th><th class="px-6 py-3">Owner</th><th class="px-6 py-3 w-36">Action</th></tr></thead>
+              <tbody><tr v-for="schedule in visibleCollections.schedules" :key="schedule.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ schedule.name }}</div><div class="table-secondary">{{ schedule.id }}</div></td><td class="text-center"><span class="state-pill" :class="schedule.active ? 'state-active' : 'state-paused'"><span></span>{{ schedule.active ? 'Active' : 'Paused' }}</span></td><td class="px-6 py-4"><div class="success-rate" :class="successRateTone(schedule.success_rate)" :aria-label="`${formattedSuccessRate(schedule.success_rate)} success rate across the latest completed executions`"><div class="success-rate-value"><span class="success-rate-dot"></span><strong>{{ formattedSuccessRate(schedule.success_rate) }}</strong></div><div class="success-rate-track" aria-hidden="true"><span :style="{ width: `${normalizedSuccessRate(schedule.success_rate)}%` }"></span></div></div></td><td class="px-6 py-4"><code class="cron-code" :title="schedule.cron_description">{{ schedule.cron_rule }}</code></td><td class="px-6 py-4"><div class="flex items-center">
                 <span
                   class="source-tooltip-trigger me-4"
                   tabindex="0"
@@ -543,14 +621,16 @@ onBeforeUnmount(() => {
           <RouterLink :to="{ name: 'schedule-new' }" class="mobile-fab" aria-label="Add schedule"><Plus :size="25" aria-hidden="true" /></RouterLink>
         </section>
 
-        <div v-if="isForm('schedules')" :class="{ 'modal-backdrop': isModal('schedules') }" @click.self="isModal('schedules') && closeForm('schedules')">
+        <div v-if="isForm('schedules')" :class="{ 'modal-backdrop': isModal('schedules') }">
         <section class="form-card" :class="{ 'modal-card': isModal('schedules') }" :role="isModal('schedules') ? 'dialog' : undefined" :aria-modal="isModal('schedules') || undefined" aria-labelledby="schedule-form-title">
           <button v-if="isModal('schedules')" type="button" class="modal-close" aria-label="Close schedule form" @click="closeForm('schedules')"><X :size="18" aria-hidden="true" /></button>
           <h3 id="schedule-form-title" class="form-title">{{ editing.schedules ? 'Update schedule' : 'New schedule' }}</h3>
+          <div v-if="formHasErrors('schedules')" class="form-error-summary" role="alert"><span aria-hidden="true">!</span><div><strong>Schedule wasn’t saved</strong><p>{{ formErrorSummary('schedules') }}</p></div></div>
           <form class="form-stack" @submit.prevent="saveSchedule">
             <div>
               <label class="form-label">Name</label>
-              <input v-model="scheduleForm.name" class="form-control" required />
+              <input v-model="scheduleForm.name" class="form-control" :class="{ 'form-control-error': fieldError('schedules', 'name') }" :aria-invalid="Boolean(fieldError('schedules', 'name'))" aria-describedby="schedule-name-error" required @input="clearFieldError('schedules', 'name')" />
+              <p v-if="fieldError('schedules', 'name')" id="schedule-name-error" class="form-field-error">{{ fieldError('schedules', 'name') }}</p>
             </div>
             <div>
               <fieldset aria-describedby="cron-rule-description">
@@ -561,6 +641,7 @@ onBeforeUnmount(() => {
                     <input
                       :value="cronRuleParts[index]"
                       class="form-control text-center"
+                      :class="{ 'form-control-error': fieldError('schedules', 'cron_rule') }"
                       required
                       autocomplete="off"
                       spellcheck="false"
@@ -574,50 +655,59 @@ onBeforeUnmount(() => {
                 <span v-else-if="cronDescriptionError" class="text-red-600">{{ cronDescriptionError }}</span>
                 <span v-else>{{ cronDescription }}</span>
               </span>
+              <p v-if="fieldError('schedules', 'cron_rule')" class="form-field-error">{{ fieldError('schedules', 'cron_rule') }}</p>
             </div>
             <div>
               <label class="form-label">Env vars</label>
               <div v-for="(row, index) in envRows" :key="index" class="mb-2 flex items-center gap-2">
-                <input v-model="row.key" class="form-control flex-1" placeholder="Name" />
-                <input v-model="row.value" class="form-control flex-1" placeholder="Value" />
+                <input v-model="row.key" class="form-control flex-1" placeholder="Name" @input="clearFieldError('schedules', 'env_vars')" />
+                <input v-model="row.value" class="form-control flex-1" placeholder="Value" @input="clearFieldError('schedules', 'env_vars')" />
                 <button type="button" class="btn btn-danger btn-round !mb-0 !me-0" aria-label="Remove environment variable" @click="envRows.splice(index, 1)"><X :size="18" aria-hidden="true" /></button>
               </div>
               <button type="button" class="btn btn-success btn-round" aria-label="Add environment variable" @click="envRows.push({ key: '', value: '' })"><Plus :size="20" aria-hidden="true" /></button>
+              <p v-if="fieldError('schedules', 'env_vars')" class="form-field-error">{{ fieldError('schedules', 'env_vars') }}</p>
             </div>
             <div>
               <label class="form-label">Image</label>
-              <input v-model="scheduleForm.image" class="form-control" required />
+              <input v-model="scheduleForm.image" class="form-control" :class="{ 'form-control-error': fieldError('schedules', 'image') }" :aria-invalid="Boolean(fieldError('schedules', 'image'))" aria-describedby="schedule-image-error" required @input="clearFieldError('schedules', 'image')" />
+              <p v-if="fieldError('schedules', 'image')" id="schedule-image-error" class="form-field-error">{{ fieldError('schedules', 'image') }}</p>
             </div>
             <div>
               <label class="form-label">Credentials</label>
-              <select v-model="scheduleForm.credential" class="form-control">
+              <select v-model="scheduleForm.credential" class="form-control" :class="{ 'form-control-error': fieldError('schedules', 'credential') }" :aria-invalid="Boolean(fieldError('schedules', 'credential'))" @change="clearFieldError('schedules', 'credential')">
                 <option :value="null">---------</option>
                 <option v-for="credential in collections.credentials" :key="credential.id" :value="credential.id">{{ credential.name }}</option>
               </select>
+              <p v-if="fieldError('schedules', 'credential')" class="form-field-error">{{ fieldError('schedules', 'credential') }}</p>
             </div>
             <div>
               <label class="form-label">Cmd</label>
-              <input v-model="scheduleForm.cmd" class="form-control" />
+              <input v-model="scheduleForm.cmd" class="form-control" :class="{ 'form-control-error': fieldError('schedules', 'cmd') }" :aria-invalid="Boolean(fieldError('schedules', 'cmd'))" @input="clearFieldError('schedules', 'cmd')" />
+              <p v-if="fieldError('schedules', 'cmd')" class="form-field-error">{{ fieldError('schedules', 'cmd') }}</p>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="form-label">Cpu</label>
-                <input v-model.number="scheduleForm.cpu" class="form-control" min="1" type="number" />
+                <input v-model.number="scheduleForm.cpu" class="form-control" :class="{ 'form-control-error': fieldError('schedules', 'cpu') }" min="1" type="number" @input="clearFieldError('schedules', 'cpu')" />
                 <span class="form-help">Number of CPUs</span>
+                <p v-if="fieldError('schedules', 'cpu')" class="form-field-error">{{ fieldError('schedules', 'cpu') }}</p>
               </div>
               <div>
                 <label class="form-label">Memory</label>
-                <input v-model.number="scheduleForm.memory" class="form-control" min="1" type="number" />
+                <input v-model.number="scheduleForm.memory" class="form-control" :class="{ 'form-control-error': fieldError('schedules', 'memory') }" min="1" type="number" @input="clearFieldError('schedules', 'memory')" />
                 <span class="form-help">Memory in MB</span>
+                <p v-if="fieldError('schedules', 'memory')" class="form-field-error">{{ fieldError('schedules', 'memory') }}</p>
               </div>
             </div>
             <div>
-              <label class="form-check"><input v-model="scheduleForm.active" class="rounded" type="checkbox" /><span>Active</span></label>
+              <label class="form-check"><input v-model="scheduleForm.active" class="rounded" type="checkbox" @change="clearFieldError('schedules', 'active')" /><span>Active</span></label>
               <p class="form-help">Active</p>
+              <p v-if="fieldError('schedules', 'active')" class="form-field-error">{{ fieldError('schedules', 'active') }}</p>
             </div>
             <div>
-              <label class="form-check"><input v-model="scheduleForm.singleton" class="rounded" type="checkbox" /><span>Singleton</span></label>
+              <label class="form-check"><input v-model="scheduleForm.singleton" class="rounded" type="checkbox" @change="clearFieldError('schedules', 'singleton')" /><span>Singleton</span></label>
               <p class="form-help">Selecting this option will make this schedule a singleton: only one instance will be allowed to run at any given time.</p>
+              <p v-if="fieldError('schedules', 'singleton')" class="form-field-error">{{ fieldError('schedules', 'singleton') }}</p>
             </div>
             <div class="form-actions"><button class="btn btn-primary">Save</button></div>
           </form>
@@ -668,10 +758,11 @@ onBeforeUnmount(() => {
           <header class="page-heading"><div><p class="eyebrow">Secure access</p><h1>Credentials</h1><p>Private connection details, organized without exposing what matters.</p></div><RouterLink :to="{ name: 'credential-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New credential</RouterLink></header>
           <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Credential vault</h2><span>{{ visibleCollections.credentials.length }} secure connections</span></div><span class="panel-badge panel-badge-neutral"><LockKeyhole :size="13" aria-hidden="true" />Encrypted</span></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3">Name</th><th class="px-6 py-3">Provider</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Schedules</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="credential in visibleCollections.credentials" :key="credential.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ credential.name }}</div></td><td class="px-6 py-4"><span class="provider-chip"><KeyRound :size="14" aria-hidden="true" />{{ categoryName(credential.category) }}</span></td><td class="px-6 py-4">{{ credential.username || 'Token only' }}</td><td class="px-6 py-4"><span class="count-chip">{{ credentialScheduleCount(credential.id) }}</span></td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete credential" @click="requestDelete('credentials', credential)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'credential-edit', params: { id: credential.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit credential"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'credential-new' }" class="mobile-fab" aria-label="Add credential"><Plus :size="25" aria-hidden="true" /></RouterLink>
         </section>
-        <div v-if="isForm('credentials')" :class="{ 'modal-backdrop': isModal('credentials') }" @click.self="isModal('credentials') && closeForm('credentials')">
+        <div v-if="isForm('credentials')" :class="{ 'modal-backdrop': isModal('credentials') }">
         <section class="form-card" :class="{ 'modal-card': isModal('credentials') }" :role="isModal('credentials') ? 'dialog' : undefined" :aria-modal="isModal('credentials') || undefined" aria-labelledby="credential-form-title">
-          <button v-if="isModal('credentials')" type="button" class="modal-close" aria-label="Close new credential" @click="closeForm('credentials')"><X :size="18" aria-hidden="true" /></button>
+          <button v-if="isModal('credentials')" type="button" class="modal-close" aria-label="Close credential form" @click="closeForm('credentials')"><X :size="18" aria-hidden="true" /></button>
           <h3 id="credential-form-title" class="form-title">{{ editing.credentials ? 'Update credential' : 'New credential' }}</h3>
+          <div v-if="formHasErrors('credentials')" class="form-error-summary" role="alert"><span aria-hidden="true">!</span><div><strong>Credential wasn’t saved</strong><p>{{ formErrorSummary('credentials') }}</p></div></div>
           <p class="text-sm font-bold text-gray-900">Select a source provider:</p>
           <div class="provider-grid">
             <button
@@ -680,24 +771,28 @@ onBeforeUnmount(() => {
               type="button"
               class="provider-option"
               :class="{ 'provider-option-active': credentialForm.category === category }"
-              @click="credentialForm.category = category"
+              @click="credentialForm.category = category; clearFieldError('credentials', 'category')"
             >
               <component :is="icon" :size="18" aria-hidden="true" />
               <span class="ms-3 whitespace-nowrap">{{ label }}</span>
             </button>
           </div>
+          <p v-if="fieldError('credentials', 'category')" class="form-field-error">{{ fieldError('credentials', 'category') }}</p>
           <form class="form-stack" @submit.prevent="save('credentials', credentialForm)">
             <div>
               <label class="form-label">Label</label>
-              <input v-model="credentialForm.name" class="form-control" required />
+              <input v-model="credentialForm.name" class="form-control" :class="{ 'form-control-error': fieldError('credentials', 'name') }" :aria-invalid="Boolean(fieldError('credentials', 'name'))" required @input="clearFieldError('credentials', 'name')" />
+              <p v-if="fieldError('credentials', 'name')" class="form-field-error">{{ fieldError('credentials', 'name') }}</p>
             </div>
             <div v-if="credentialNeedsUsername(credentialForm.category)">
               <label class="form-label">{{ credentialUsernameLabel(credentialForm.category) }}</label>
-              <input v-model="credentialForm.username" class="form-control" />
+              <input v-model="credentialForm.username" class="form-control" :class="{ 'form-control-error': fieldError('credentials', 'username') }" :aria-invalid="Boolean(fieldError('credentials', 'username'))" @input="clearFieldError('credentials', 'username')" />
+              <p v-if="fieldError('credentials', 'username')" class="form-field-error">{{ fieldError('credentials', 'username') }}</p>
             </div>
             <div>
               <label class="form-label">{{ credentialPasswordLabel(credentialForm.category) }}</label>
-              <input v-model="credentialForm.password" type="password" class="form-control" :required="!editing.credentials" />
+              <input v-model="credentialForm.password" type="password" class="form-control" :class="{ 'form-control-error': fieldError('credentials', 'password') }" :aria-invalid="Boolean(fieldError('credentials', 'password'))" :required="!editing.credentials" @input="clearFieldError('credentials', 'password')" />
+              <p v-if="fieldError('credentials', 'password')" class="form-field-error">{{ fieldError('credentials', 'password') }}</p>
             </div>
             <div class="form-actions"><button class="btn btn-primary">Save</button></div>
           </form>
@@ -709,31 +804,36 @@ onBeforeUnmount(() => {
           <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Monitor :size="20" aria-hidden="true" /></div><div><span>Runtime nodes</span><strong>{{ collections.nodes.length }}</strong><small>configured endpoints</small></div></article><article class="metric-card"><div class="metric-icon"><LockKeyhole :size="20" aria-hidden="true" /></div><div><span>SSH secured</span><strong>{{ sshNodes }}</strong><small>encrypted connections</small></div></article></div>
           <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Connected infrastructure</h2><span>{{ visibleCollections.nodes.length }} runtime targets</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all nodes" /></th><th class="px-6 py-3">Name</th><th class="px-6 py-3">Host</th><th class="px-6 py-3">Port</th><th class="px-6 py-3">Connection</th><th class="px-6 py-3">Secret</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="node in visibleCollections.nodes" :key="node.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select node ${node.name}`" /></td><td class="px-6 py-4 whitespace-nowrap"><div class="table-primary">{{ node.name }}</div></td><td class="px-6 py-4"><code class="host-code">{{ node.host }}</code></td><td class="px-6 py-4">{{ node.port }}</td><td class="px-6 py-4"><span class="provider-chip"><LockKeyhole v-if="node.use_ssh" :size="14" aria-hidden="true" /><Monitor v-else :size="14" aria-hidden="true" />{{ node.use_ssh ? 'SSH' : 'Direct' }}</span></td><td class="px-6 py-4"><span class="secret-value">••••••••</span></td><td class="px-6 py-4"><button class="btn-mini-remove" aria-label="Delete node" @click="requestDelete('nodes', node)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'node-edit', params: { id: node.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit node"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'node-new' }" class="mobile-fab" aria-label="Add node"><Plus :size="25" aria-hidden="true" /></RouterLink>
         </section>
-        <div v-if="isForm('nodes')" :class="{ 'modal-backdrop': isModal('nodes') }" @click.self="isModal('nodes') && closeForm('nodes')">
+        <div v-if="isForm('nodes')" :class="{ 'modal-backdrop': isModal('nodes') }">
         <section class="form-card" :class="{ 'modal-card': isModal('nodes') }" :role="isModal('nodes') ? 'dialog' : undefined" :aria-modal="isModal('nodes') || undefined" aria-labelledby="node-form-title">
-          <button v-if="isModal('nodes')" type="button" class="modal-close" aria-label="Close new node" @click="closeForm('nodes')"><X :size="18" aria-hidden="true" /></button>
+          <button v-if="isModal('nodes')" type="button" class="modal-close" aria-label="Close node form" @click="closeForm('nodes')"><X :size="18" aria-hidden="true" /></button>
           <h3 id="node-form-title" class="form-title">{{ editing.nodes ? 'Update node' : 'New node' }}</h3>
+          <div v-if="formHasErrors('nodes')" class="form-error-summary" role="alert"><span aria-hidden="true">!</span><div><strong>Node wasn’t saved</strong><p>{{ formErrorSummary('nodes') }}</p></div></div>
           <form class="form-stack" @submit.prevent="save('nodes', nodeForm)">
             <div>
               <label class="form-label">Name</label>
-              <input v-model="nodeForm.name" class="form-control" required />
+              <input v-model="nodeForm.name" class="form-control" :class="{ 'form-control-error': fieldError('nodes', 'name') }" :aria-invalid="Boolean(fieldError('nodes', 'name'))" required @input="clearFieldError('nodes', 'name')" />
+              <p v-if="fieldError('nodes', 'name')" class="form-field-error">{{ fieldError('nodes', 'name') }}</p>
             </div>
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_6rem_7rem]">
               <div>
                 <label class="form-label">Host</label>
-                <input v-model="nodeForm.host" class="form-control" required />
+                <input v-model="nodeForm.host" class="form-control" :class="{ 'form-control-error': fieldError('nodes', 'host') }" :aria-invalid="Boolean(fieldError('nodes', 'host'))" required @input="clearFieldError('nodes', 'host')" />
+                <p v-if="fieldError('nodes', 'host')" class="form-field-error">{{ fieldError('nodes', 'host') }}</p>
               </div>
               <div>
                 <label class="form-label">Port</label>
-                <input v-model.number="nodeForm.port" class="form-control" type="number" required />
+                <input v-model.number="nodeForm.port" class="form-control" :class="{ 'form-control-error': fieldError('nodes', 'port') }" :aria-invalid="Boolean(fieldError('nodes', 'port'))" type="number" required @input="clearFieldError('nodes', 'port')" />
+                <p v-if="fieldError('nodes', 'port')" class="form-field-error">{{ fieldError('nodes', 'port') }}</p>
               </div>
               <div class="flex items-end pb-1">
-                <label class="form-check"><input v-model="nodeForm.use_ssh" type="checkbox" class="rounded" /><span>Use SSH</span></label>
+                <div><label class="form-check"><input v-model="nodeForm.use_ssh" type="checkbox" class="rounded" @change="clearFieldError('nodes', 'use_ssh')" /><span>Use SSH</span></label><p v-if="fieldError('nodes', 'use_ssh')" class="form-field-error">{{ fieldError('nodes', 'use_ssh') }}</p></div>
               </div>
             </div>
             <div>
               <label class="form-label">Secret</label>
-              <input v-model="nodeForm.secret" type="password" class="form-control" />
+              <input v-model="nodeForm.secret" type="password" class="form-control" :class="{ 'form-control-error': fieldError('nodes', 'secret') }" :aria-invalid="Boolean(fieldError('nodes', 'secret'))" @input="clearFieldError('nodes', 'secret')" />
+              <p v-if="fieldError('nodes', 'secret')" class="form-field-error">{{ fieldError('nodes', 'secret') }}</p>
             </div>
             <div class="form-actions"><button class="btn btn-primary">Save</button></div>
           </form>
@@ -745,32 +845,38 @@ onBeforeUnmount(() => {
           <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Users :size="20" aria-hidden="true" /></div><div><span>Total users</span><strong>{{ collections.users.length }}</strong><small>workspace accounts</small></div></article><article class="metric-card"><div class="metric-icon"><KeyRound :size="20" aria-hidden="true" /></div><div><span>Administrators</span><strong>{{ adminUsers }}</strong><small>elevated access</small></div></article></div>
           <div class="data-panel not-format relative overflow-x-auto"><div class="panel-heading"><div><h2>Workspace members</h2><span>{{ visibleCollections.users.length }} people with access</span></div></div><table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3">Name / Email</th><th class="px-6 py-3">Username</th><th class="px-6 py-3">Joined</th><th class="px-6 py-3">Last login</th><th class="px-6 py-3">Role</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="user in visibleCollections.users" :key="user.id" class="default-table-row"><td class="px-6 py-4 text-gray-900 rounded-s-xl"><div class="table-primary">{{ [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username }}</div><div class="table-secondary">{{ user.email || 'No email set' }}</div></td><td class="px-6 py-4">{{ user.username }}</td><td class="px-6 py-4">{{ user.date_joined ? new Date(user.date_joined).toLocaleDateString() : '—' }}</td><td class="px-6 py-4">{{ user.last_login ? new Date(user.last_login).toLocaleString() : 'Never' }}</td><td class="px-6 py-4"><span class="provider-chip"><Check v-if="user.is_superuser" :size="14" aria-hidden="true" />{{ user.is_superuser ? 'Administrator' : 'Member' }}</span></td><td class="px-6 py-4 rounded-e-xl"><button class="btn-mini-remove" aria-label="Delete user" @click="requestDelete('users', user)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'user-edit', params: { id: user.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit user"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table></div><RouterLink :to="{ name: 'user-new' }" class="mobile-fab" aria-label="Add user"><Plus :size="25" aria-hidden="true" /></RouterLink>
         </section>
-        <div v-if="isForm('users')" :class="{ 'modal-backdrop': isModal('users') }" @click.self="isModal('users') && closeForm('users')">
+        <div v-if="isForm('users')" :class="{ 'modal-backdrop': isModal('users') }">
         <section class="form-card" :class="{ 'modal-card': isModal('users') }" :role="isModal('users') ? 'dialog' : undefined" :aria-modal="isModal('users') || undefined" aria-labelledby="user-form-title">
           <button v-if="isModal('users')" type="button" class="modal-close" aria-label="Close user form" @click="closeForm('users')"><X :size="18" aria-hidden="true" /></button>
           <h3 id="user-form-title" class="form-title">{{ editing.users ? 'Update user' : 'Create user' }}</h3>
+          <div v-if="formHasErrors('users')" class="form-error-summary" role="alert"><span aria-hidden="true">!</span><div><strong>User wasn’t saved</strong><p>{{ formErrorSummary('users') }}</p></div></div>
           <form class="form-stack" @submit.prevent="save('users', userForm)">
             <div>
               <label class="form-label">Username</label>
-              <input v-model="userForm.username" class="form-control" required />
+              <input v-model="userForm.username" class="form-control" :class="{ 'form-control-error': fieldError('users', 'username') }" :aria-invalid="Boolean(fieldError('users', 'username'))" required @input="clearFieldError('users', 'username')" />
+              <p v-if="fieldError('users', 'username')" class="form-field-error">{{ fieldError('users', 'username') }}</p>
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label class="form-label">First name</label>
-                <input v-model="userForm.first_name" class="form-control" />
+                <input v-model="userForm.first_name" class="form-control" :class="{ 'form-control-error': fieldError('users', 'first_name') }" :aria-invalid="Boolean(fieldError('users', 'first_name'))" @input="clearFieldError('users', 'first_name')" />
+                <p v-if="fieldError('users', 'first_name')" class="form-field-error">{{ fieldError('users', 'first_name') }}</p>
               </div>
               <div>
                 <label class="form-label">Last name</label>
-                <input v-model="userForm.last_name" class="form-control" />
+                <input v-model="userForm.last_name" class="form-control" :class="{ 'form-control-error': fieldError('users', 'last_name') }" :aria-invalid="Boolean(fieldError('users', 'last_name'))" @input="clearFieldError('users', 'last_name')" />
+                <p v-if="fieldError('users', 'last_name')" class="form-field-error">{{ fieldError('users', 'last_name') }}</p>
               </div>
             </div>
             <div>
               <label class="form-label">Email</label>
-              <input v-model="userForm.email" class="form-control" type="email" />
+              <input v-model="userForm.email" class="form-control" :class="{ 'form-control-error': fieldError('users', 'email') }" :aria-invalid="Boolean(fieldError('users', 'email'))" type="email" @input="clearFieldError('users', 'email')" />
+              <p v-if="fieldError('users', 'email')" class="form-field-error">{{ fieldError('users', 'email') }}</p>
             </div>
             <div>
               <label class="form-label">Password</label>
-              <input v-model="userForm.password" type="password" class="form-control" :required="!editing.users" />
+              <input v-model="userForm.password" type="password" class="form-control" :class="{ 'form-control-error': fieldError('users', 'password') }" :aria-invalid="Boolean(fieldError('users', 'password'))" :required="!editing.users" @input="clearFieldError('users', 'password')" />
+              <p v-if="fieldError('users', 'password')" class="form-field-error">{{ fieldError('users', 'password') }}</p>
             </div>
             <div class="form-actions"><button class="btn btn-primary">Save</button></div>
           </form>
@@ -781,7 +887,6 @@ onBeforeUnmount(() => {
       <div
         v-if="deleteRequest"
         class="modal-backdrop"
-        @click.self="closeDeleteConfirmation"
       >
         <section
           class="modal-card form-card !max-w-md"

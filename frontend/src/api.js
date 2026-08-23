@@ -18,6 +18,7 @@ export async function request(path, options = {}) {
   if (!response.ok) {
     const error = new Error(data.detail || Object.values(data).flat().join(" ") || "Request failed.");
     error.status = response.status;
+    error.details = data;
     throw error;
   }
   return data;
