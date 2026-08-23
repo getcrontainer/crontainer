@@ -2,7 +2,7 @@
 
 import os
 
-import cron_descriptor
+from cronsim import CronSimError
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.db.models import Prefetch
@@ -12,18 +12,17 @@ from rest_framework import permissions, serializers, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from apps.core.cron import parse_cron_rule
 from apps.core.models import Credential, Job, Schedule
 
 User = get_user_model()
 
 
 def validate_cron_rule(value: str) -> str:
-    if len(value.split()) != 5:
-        raise serializers.ValidationError("Cronjob expression is composed of 5 elements.")
     try:
-        cron_descriptor.get_description(value)
-    except cron_descriptor.Exception.FormatException as exc:
-        raise serializers.ValidationError("Not a valid cronjob expression.") from exc
+        parse_cron_rule(value)
+    except CronSimError as exc:
+        raise serializers.ValidationError(f"Invalid cron expression: {exc}") from exc
     return value
 
 

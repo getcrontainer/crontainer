@@ -50,13 +50,15 @@ class TestScheduleApi(ApiTestCase):
         self.assertFalse((settings.CRONTAB_PATH / f"ct_{schedule_id}").exists())
 
     def test_invalid_cron_rule_is_rejected(self):
-        response = self.client.post(
-            "/api/schedules/",
-            data={"name": "invalid", "image": "alpine", "cron_rule": "invalid"},
-            content_type="application/json",
-        )
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("cron_rule", response.json())
+        for cron_rule in ["invalid", "/5 0 * * *"]:
+            with self.subTest(cron_rule=cron_rule):
+                response = self.client.post(
+                    "/api/schedules/",
+                    data={"name": "invalid", "image": "alpine", "cron_rule": cron_rule},
+                    content_type="application/json",
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("cron_rule", response.json())
 
     def test_success_rate_uses_the_latest_1000_completed_executions(self):
         schedule = Schedule.objects.create(
@@ -111,4 +113,8 @@ class TestAuthAndUtilityApi(ApiTestCase):
 
         response = self.client.get("/api/describe-cron/?cron_rule=*+*+*+*+*")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["description"], "Every minute, every hour, every day")
+        self.assertEqual(response.json()["description"], "Every minute")
+
+        response = self.client.get("/api/describe-cron/?cron_rule=%2F5+0+*+*+*")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["description"], "Invalid cron expression")

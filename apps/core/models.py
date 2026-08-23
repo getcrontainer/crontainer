@@ -1,18 +1,15 @@
 import uuid
 
 import dateutil
-from cron_descriptor import ExpressionDescriptor, FormatException, MissingFieldException
-from cron_descriptor import Options as CronOptions
+from cronsim import CronSimError
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import PROTECT
 from django.utils import timezone
 
-User = get_user_model()
-cron_options = CronOptions()
+from apps.core.cron import parse_cron_rule
 
-cron_options.verbose = True
-cron_options.use_24hour_time_format = True
+User = get_user_model()
 
 
 class CategoryChoices(models.IntegerChoices):
@@ -95,8 +92,8 @@ class Schedule(models.Model):
     @property
     def cron_description(self):
         try:
-            return ExpressionDescriptor(self.cron_rule, options=cron_options).get_description()
-        except (MissingFieldException, FormatException):
+            return parse_cron_rule(self.cron_rule).explain()
+        except CronSimError:
             return "Invalid cron rule"
 
 
