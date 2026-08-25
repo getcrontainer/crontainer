@@ -183,20 +183,20 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cronsim", specifier = ">=2.7" },
+    { name = "cronsim", specifier = "==2.7" },
     { name = "django", specifier = "==5.2.1" },
     { name = "django-environ", specifier = "==0.11.2" },
-    { name = "django-filter", specifier = ">=26.1" },
+    { name = "django-filter", specifier = "==26.1" },
     { name = "djangorestframework", specifier = "==3.15.2" },
     { name = "docker", specifier = "==7.1.0" },
     { name = "gunicorn", specifier = "==23.0.0" },
     { name = "python-dateutil", specifier = "==2.9.0.post0" },
     { name = "pyyaml", specifier = "==6.0.2" },
-    { name = "whitenoise", specifier = ">=6.12.0" },
+    { name = "whitenoise", specifier = "==6.12.0" },
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.16.4" }]
+dev = [{ name = "ruff", specifier = "==0.16.4" }]
 
 [[package]]
 name = "django"
