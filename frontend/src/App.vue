@@ -9,6 +9,7 @@ import {
   Cloud,
   Container,
   Copy,
+  Filter,
   GitBranch,
   GitFork,
   HardDrive,
@@ -62,7 +63,7 @@ const HEALTH_POLL_INTERVAL_MS = 30_000;
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
-const { currentUser, loading, error, notice, saveError, collections, dashboardSummary, pagination } = storeToRefs(appStore);
+const { currentUser, loading, error, notice, saveError, collections, dashboardSummary, jobFilterOptions, pagination } = storeToRefs(appStore);
 const activeTab = computed(() => route.meta.resource || "schedules");
 const mobileSidebarOpen = ref(false);
 const userMenuOpen = ref(false);
@@ -76,6 +77,8 @@ const healthCheckedAt = ref(null);
 const cronFilesRepairing = ref(false);
 const cronFilesRepairError = ref("");
 const cronFilesRepairNotice = ref("");
+const jobFilters = reactive({ status: "", schedule: "" });
+const jobsFiltering = ref(false);
 const loginForm = reactive({ username: "", password: "" });
 const editing = reactive({ schedules: null, credentials: null, users: null, nodes: null });
 const formErrors = reactive({
@@ -137,6 +140,7 @@ const systemHealthChecks = computed(() => healthCheckDefinitions.map(([key, labe
   }
   return { key, label, icon, status, detail, missingFiles };
 }));
+const jobFiltersActive = computed(() => Boolean(jobFilters.status || jobFilters.schedule));
 const userInitials = computed(() => {
   const user = currentUser.value;
   if (!user) return "CT";
@@ -345,6 +349,11 @@ function isJobLog() { return activeTab.value === "jobs" && route.meta.mode === "
 function categoryName(category) {
   return { 1: "Dockerhub", 2: "Github PAT", 3: "AWS ECR", 4: "Gitlab PAT", 97: "Generic registry", 98: "Generic Git", 99: "Generic HTTP auth" }[category] || category;
 }
+function jobStatusLabel(status) {
+  return String(status || "Unknown")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 function credentialNeedsUsername(category) {
   return [1, 3, 98].includes(Number(category));
 }
@@ -364,6 +373,9 @@ function collectionStatus(resource, singular, plural = `${singular}s`) {
   const loaded = collections.value[resource].length;
   const total = pagination.value[resource].count;
   if (searchQuery.value.trim()) return `${visible} matching ${visible === 1 ? singular : plural} in ${loaded} loaded`;
+  if (resource === "jobs" && jobFiltersActive.value) {
+    return `${total} matching ${total === 1 ? singular : plural} · ${loaded} loaded`;
+  }
   return `${loaded} of ${total} ${total === 1 ? singular : plural} loaded`;
 }
 function remainingItems(resource) {
@@ -538,11 +550,35 @@ async function initialise() {
 
 async function refreshJobs() {
   try {
-    await Promise.all([appStore.load("jobs"), appStore.loadDashboardSummary()]);
+    await Promise.all([
+      appStore.load("jobs", { filters: { ...jobFilters } }),
+      appStore.loadDashboardSummary(),
+      appStore.loadJobFilterOptions(),
+    ]);
   } catch (err) {
     error.value = err.message || "Unable to refresh jobs.";
     notice.value = "";
   }
+}
+
+async function applyJobFilters() {
+  if (jobsFiltering.value) return;
+  jobsFiltering.value = true;
+  try {
+    await appStore.load("jobs", { filters: { ...jobFilters } });
+    error.value = "";
+  } catch (err) {
+    error.value = err.message || "Unable to filter jobs.";
+    notice.value = "";
+  } finally {
+    jobsFiltering.value = false;
+  }
+}
+
+async function clearJobFilters() {
+  jobFilters.status = "";
+  jobFilters.schedule = "";
+  await applyJobFilters();
 }
 
 async function refreshSystemHealth() {
@@ -902,7 +938,15 @@ onBeforeUnmount(() => {
           </div>
           <div class="data-panel not-format relative overflow-x-auto">
             <div class="panel-heading"><div><h2>Recent activity</h2><span>{{ collectionStatus('jobs', 'run') }}</span></div></div>
-            <table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all jobs" /></th><th class="px-6 py-3">Id</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Schedule</th><th class="px-6 py-3">Cron rule</th><th class="px-6 py-3">Started at</th><th class="px-6 py-3">Duration</th><th class="px-6 py-3">Log</th></tr></thead><tbody><tr v-for="job in visibleCollections.jobs" :key="job.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select job ${job.id}`" /></td><td class="px-6 py-4 whitespace-nowrap"><span class="table-secondary">{{ job.id }}</span></td><td class="px-6 py-4"><span class="state-pill" :class="Number(job.status_code) === 0 ? 'state-active' : 'state-paused'"><span></span>{{ job.status || 'Unknown' }}</span></td><td class="px-6 py-4"><span class="table-primary">{{ job.schedule_name }}</span></td><td class="px-6 py-4"><code class="cron-code">{{ job.schedule_cron_rule || '—' }}</code></td><td class="px-6 py-4">{{ new Date(job.created_at).toLocaleString() }}</td><td class="px-6 py-4">{{ job.duration }}s</td><td class="px-6 py-4"><RouterLink :to="{ name: 'job-log', params: { id: job.id } }" class="btn-mini-edit" :aria-label="`Open log for job ${job.id}`"><Logs :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table>
+            <div class="job-filter-bar" aria-label="Job filters">
+              <div class="job-filter-intro"><span class="job-filter-icon"><Filter :size="16" aria-hidden="true" /></span><span><strong>Filter activity</strong><small aria-live="polite">{{ jobsFiltering ? 'Updating results…' : 'Filters run on the server' }}</small></span></div>
+              <div class="job-filter-controls">
+                <label class="job-filter-field"><span>Status</span><select v-model="jobFilters.status" class="job-filter-select" :disabled="jobsFiltering" @change="applyJobFilters"><option value="">All statuses</option><option v-for="status in jobFilterOptions.statuses" :key="status" :value="status">{{ jobStatusLabel(status) }}</option></select></label>
+                <label class="job-filter-field job-filter-schedule"><span>Schedule</span><select v-model="jobFilters.schedule" class="job-filter-select" :disabled="jobsFiltering" @change="applyJobFilters"><option value="">All schedules</option><option v-for="schedule in jobFilterOptions.schedules" :key="schedule.id" :value="schedule.id">{{ schedule.name }}</option></select></label>
+                <button v-if="jobFiltersActive" type="button" class="job-filter-clear" :disabled="jobsFiltering" @click="clearJobFilters"><X :size="14" aria-hidden="true" />Clear</button>
+              </div>
+            </div>
+            <table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all jobs" /></th><th class="px-6 py-3">Id</th><th class="px-6 py-3">Status</th><th class="px-6 py-3">Schedule</th><th class="px-6 py-3">Cron rule</th><th class="px-6 py-3">Started at</th><th class="px-6 py-3">Duration</th><th class="px-6 py-3">Log</th></tr></thead><tbody><tr v-if="!visibleCollections.jobs.length"><td colspan="8" class="table-empty-state"><Filter :size="22" aria-hidden="true" /><strong>{{ jobFiltersActive ? 'No jobs match these filters' : 'No jobs found' }}</strong><span>{{ jobFiltersActive ? 'Try another status or schedule.' : 'Job runs will appear here after a schedule starts.' }}</span></td></tr><tr v-for="job in visibleCollections.jobs" :key="job.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select job ${job.id}`" /></td><td class="px-6 py-4 whitespace-nowrap"><span class="table-secondary">{{ job.id }}</span></td><td class="px-6 py-4"><span class="state-pill" :class="Number(job.status_code) === 0 ? 'state-active' : 'state-paused'"><span></span>{{ job.status || 'Unknown' }}</span></td><td class="px-6 py-4"><span class="table-primary">{{ job.schedule_name }}</span></td><td class="px-6 py-4"><code class="cron-code">{{ job.schedule_cron_rule || '—' }}</code></td><td class="px-6 py-4">{{ new Date(job.created_at).toLocaleString() }}</td><td class="px-6 py-4">{{ job.duration }}s</td><td class="px-6 py-4"><RouterLink :to="{ name: 'job-log', params: { id: job.id } }" class="btn-mini-edit" :aria-label="`Open log for job ${job.id}`"><Logs :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table>
             <div v-if="pagination.jobs.next" class="load-more-bar"><button type="button" class="load-more-button" :disabled="pagination.jobs.loadingMore" @click="loadMore('jobs')">{{ pagination.jobs.loadingMore ? 'Loading…' : `Load ${nextPageSize('jobs')} more` }}</button><span>{{ collections.jobs.length }} of {{ pagination.jobs.count }} loaded</span></div>
           </div>
         </section>

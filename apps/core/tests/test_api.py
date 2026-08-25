@@ -1,5 +1,6 @@
 import shutil
 from datetime import timedelta
+from urllib.parse import parse_qs, urlparse
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -89,6 +90,77 @@ class TestScheduleApi(ApiTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["success_rate"], 25.0)
+
+
+class TestJobApi(ApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.nightly = Schedule.objects.create(name="nightly", image="alpine", cron_rule="0 0 * * *")
+        self.hourly = Schedule.objects.create(name="hourly", image="alpine", cron_rule="0 * * * *")
+        self.running_job = Job.objects.create(schedule=self.nightly, status="running")
+        self.exited_job = Job.objects.create(schedule=self.nightly, status="exited", status_code=0)
+        self.failed_job = Job.objects.create(schedule=self.hourly, status="failure", status_code=-100)
+
+    def test_filters_jobs_by_status(self):
+        response = self.client.get("/api/jobs/?status=running")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 1)
+        self.assertEqual(response.json()["results"][0]["id"], str(self.running_job.id))
+
+    def test_filters_jobs_by_schedule(self):
+        response = self.client.get(f"/api/jobs/?schedule={self.nightly.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 2)
+        self.assertEqual(
+            {job["id"] for job in response.json()["results"]},
+            {str(self.running_job.id), str(self.exited_job.id)},
+        )
+
+    def test_combines_status_and_schedule_filters(self):
+        response = self.client.get(f"/api/jobs/?status=failure&schedule={self.hourly.id}")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["count"], 1)
+        self.assertEqual(response.json()["results"][0]["id"], str(self.failed_job.id))
+
+    def test_rejects_invalid_schedule_filter(self):
+        response = self.client.get("/api/jobs/?schedule=not-a-uuid")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["schedule"], ["Enter a valid schedule ID."])
+
+    def test_filter_options_include_job_statuses_and_schedules(self):
+        unused_schedule = Schedule.objects.create(name="unused", image="alpine", cron_rule="0 2 * * *")
+
+        response = self.client.get("/api/jobs/filter-options/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["statuses"], ["exited", "failure", "running"])
+        self.assertEqual(
+            response.json()["schedules"],
+            [
+                {"id": str(self.hourly.id), "name": "hourly"},
+                {"id": str(self.nightly.id), "name": "nightly"},
+            ],
+        )
+        self.assertNotIn(str(unused_schedule.id), {item["id"] for item in response.json()["schedules"]})
+
+    def test_filtered_pagination_preserves_query_parameters(self):
+        Job.objects.bulk_create(Job(schedule=self.nightly, status="running") for _index in range(50))
+
+        first_response = self.client.get(f"/api/jobs/?status=running&schedule={self.nightly.id}")
+        next_url = urlparse(first_response.json()["next"])
+        second_response = self.client.get(f"{next_url.path}?{next_url.query}")
+
+        self.assertEqual(first_response.json()["count"], 51)
+        self.assertEqual(len(first_response.json()["results"]), 50)
+        self.assertEqual(
+            parse_qs(next_url.query),
+            {"page": ["2"], "schedule": [str(self.nightly.id)], "status": ["running"]},
+        )
+        self.assertEqual(len(second_response.json()["results"]), 1)
 
 
 class TestCredentialApi(ApiTestCase):

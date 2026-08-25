@@ -28,6 +28,7 @@ export const useAppStore = defineStore("app", () => {
   const collections = reactive(Object.fromEntries(resourceNames.map((resource) => [resource, []])));
   const pagination = reactive(Object.fromEntries(resourceNames.map((resource) => [resource, emptyPagination()])));
   const dashboardSummary = reactive(emptySummary());
+  const jobFilterOptions = reactive({ statuses: [], schedules: [] });
 
   function message(text) {
     notice.value = text;
@@ -45,8 +46,8 @@ export const useAppStore = defineStore("app", () => {
     saveError.value = null;
   }
 
-  async function load(resource, { append = false, page = null } = {}) {
-    const response = await api.list(resource, page);
+  async function load(resource, { append = false, page = null, filters = {} } = {}) {
+    const response = await api.list(resource, page, filters);
     const items = Array.isArray(response) ? response : response.results;
     if (append) {
       const existingIds = new Set(collections[resource].map((item) => item.id));
@@ -77,8 +78,18 @@ export const useAppStore = defineStore("app", () => {
     resourceNames.forEach((resource) => Object.assign(dashboardSummary[resource], summary[resource]));
   }
 
+  async function loadJobFilterOptions() {
+    const options = await api.jobFilterOptions();
+    jobFilterOptions.statuses = options.statuses;
+    jobFilterOptions.schedules = options.schedules;
+  }
+
   async function loadAll() {
-    await Promise.all([...resourceNames.map((resource) => load(resource)), loadDashboardSummary()]);
+    await Promise.all([
+      ...resourceNames.map((resource) => load(resource)),
+      loadDashboardSummary(),
+      loadJobFilterOptions(),
+    ]);
   }
 
   async function initialise() {
@@ -119,6 +130,8 @@ export const useAppStore = defineStore("app", () => {
         Object.assign(pagination[resource], emptyPagination());
         Object.assign(dashboardSummary[resource], emptySummary()[resource]);
       });
+      jobFilterOptions.statuses = [];
+      jobFilterOptions.schedules = [];
       clearMessages();
     }
   }
@@ -152,6 +165,7 @@ export const useAppStore = defineStore("app", () => {
   return {
     currentUser,
     dashboardSummary,
+    jobFilterOptions,
     loading,
     error,
     notice,
@@ -161,6 +175,7 @@ export const useAppStore = defineStore("app", () => {
     load,
     loadAll,
     loadDashboardSummary,
+    loadJobFilterOptions,
     loadMore,
     pagination,
     removeResource,

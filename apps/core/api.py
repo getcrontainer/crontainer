@@ -9,8 +9,10 @@ from django.db import DatabaseError
 from django.db.models import Count, Prefetch, Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django_filters import rest_framework as filters
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, serializers, status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 
 from apps.core.cron import parse_cron_rule, write_crontab
@@ -119,6 +121,18 @@ class JobSerializer(serializers.ModelSerializer):
         return job.duration()
 
 
+class JobFilter(filters.FilterSet):
+    status = filters.CharFilter(field_name="status", lookup_expr="iexact")
+    schedule = filters.UUIDFilter(
+        field_name="schedule_id",
+        error_messages={"invalid": "Enter a valid schedule ID."},
+    )
+
+    class Meta:
+        model = Job
+        fields = []
+
+
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
 
@@ -188,6 +202,14 @@ class ScheduleViewSet(viewsets.ModelViewSet):
 class JobViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Job.objects.select_related("schedule").all()
     serializer_class = JobSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = JobFilter
+
+    @action(detail=False, methods=["get"], url_path="filter-options")
+    def filter_options(self, request):
+        statuses = Job.objects.exclude(status="").order_by("status").values_list("status", flat=True).distinct()
+        schedules = Schedule.objects.filter(job__isnull=False).order_by("name", "id").values("id", "name").distinct()
+        return Response({"statuses": list(statuses), "schedules": list(schedules)})
 
 
 class CredentialViewSet(viewsets.ModelViewSet):
