@@ -21,6 +21,7 @@ import {
   Monitor,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   Settings,
   Terminal,
@@ -72,6 +73,9 @@ const systemHealth = ref(null);
 const healthError = ref("");
 const healthRefreshing = ref(false);
 const healthCheckedAt = ref(null);
+const cronFilesRepairing = ref(false);
+const cronFilesRepairError = ref("");
+const cronFilesRepairNotice = ref("");
 const loginForm = reactive({ username: "", password: "" });
 const editing = reactive({ schedules: null, credentials: null, users: null, nodes: null });
 const formErrors = reactive({
@@ -542,6 +546,8 @@ async function refreshJobs() {
 }
 
 async function refreshSystemHealth() {
+  if (cronFilesRepairing.value) return;
+  cronFilesRepairNotice.value = "";
   const requestId = ++healthRequestId;
   healthRefreshing.value = true;
   try {
@@ -549,6 +555,7 @@ async function refreshSystemHealth() {
     if (requestId !== healthRequestId) return;
     systemHealth.value = result;
     healthError.value = "";
+    if (result?.checks?.cron_files?.healthy) cronFilesRepairError.value = "";
   } catch (err) {
     if (requestId !== healthRequestId) return;
     healthError.value = err.message || "Unable to check system health.";
@@ -560,12 +567,35 @@ async function refreshSystemHealth() {
   }
 }
 
+async function recreateMissingCronFiles() {
+  if (cronFilesRepairing.value || cronFilesRepairNotice.value) return;
+  healthRequestId += 1;
+  healthRefreshing.value = false;
+  cronFilesRepairing.value = true;
+  cronFilesRepairError.value = "";
+  try {
+    const result = await api.recreateMissingCronFiles();
+    systemHealth.value = result.health;
+    healthError.value = "";
+    healthCheckedAt.value = new Date();
+    cronFilesRepairNotice.value = result.recreated_count
+      ? `${result.recreated_count} schedule ${result.recreated_count === 1 ? 'file' : 'files'} recreated`
+      : "Schedule files already restored";
+  } catch (err) {
+    cronFilesRepairError.value = err.message || "Unable to recreate missing schedule files.";
+  } finally {
+    cronFilesRepairing.value = false;
+  }
+}
+
 function stopSystemHealthPolling() {
   window.clearInterval(healthPollTimer);
   healthPollTimer = undefined;
   healthRequestId += 1;
   healthRefreshing.value = false;
   healthError.value = "";
+  cronFilesRepairError.value = "";
+  cronFilesRepairNotice.value = "";
   systemHealth.value = null;
   healthCheckedAt.value = null;
 }
@@ -665,12 +695,13 @@ onBeforeUnmount(() => {
               class="system-status"
               :class="`system-status-${systemHealthState}`"
               :aria-label="systemHealthLabel"
-              aria-describedby="system-health-popover"
+              aria-controls="system-health-popover"
+              aria-haspopup="dialog"
             >
               <span class="status-dot" aria-hidden="true"></span>
               <span class="system-status-label">{{ systemHealthLabel }}</span>
             </button>
-            <div id="system-health-popover" class="system-health-popover" role="tooltip">
+            <div id="system-health-popover" class="system-health-popover" role="dialog" aria-label="System health details">
               <header class="health-popover-header">
                 <span><strong>System health</strong><small>Checked {{ healthCheckedAtLabel }}</small></span>
                 <span class="health-summary" :class="`health-summary-${systemHealthState}`">{{ systemHealthState }}</span>
@@ -683,6 +714,14 @@ onBeforeUnmount(() => {
                     <strong>{{ check.label }}</strong><small>{{ check.detail }}</small>
                     <span v-if="check.missingFiles.length" class="health-missing-files">
                       <code v-for="filename in check.missingFiles" :key="filename">{{ filename }}</code>
+                    </span>
+                    <span v-if="check.key === 'cron_files' && (check.missingFiles.length || cronFilesRepairError || cronFilesRepairNotice)" class="health-check-action">
+                      <button type="button" class="health-repair-button" :class="{ 'health-repair-button-success': cronFilesRepairNotice }" :disabled="cronFilesRepairing" :aria-disabled="Boolean(cronFilesRepairNotice)" @click.stop="recreateMissingCronFiles">
+                        <Check v-if="cronFilesRepairNotice" :size="13" aria-hidden="true" />
+                        <RefreshCw v-else :size="13" :class="{ 'is-spinning': cronFilesRepairing }" aria-hidden="true" />
+                        {{ cronFilesRepairNotice || (cronFilesRepairing ? 'Recreating files…' : 'Recreate missing files') }}
+                      </button>
+                      <small v-if="cronFilesRepairError" class="health-repair-error" role="alert">{{ cronFilesRepairError }}</small>
                     </span>
                   </span>
                   <span class="health-check-state"><i aria-hidden="true"></i>{{ check.status }}</span>

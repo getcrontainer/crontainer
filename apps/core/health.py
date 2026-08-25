@@ -7,6 +7,7 @@ from pathlib import Path
 from django.conf import settings
 from django.db import DatabaseError
 
+from apps.core.cron import schedule_crontab_filename, write_crontab
 from apps.core.models import Schedule
 
 
@@ -54,7 +55,8 @@ def cron_files_health() -> dict:
     directory = settings.CRONTAB_PATH
     try:
         expected_files = [
-            f"ct_{schedule_id}" for schedule_id in Schedule.objects.order_by("id").values_list("id", flat=True)
+            schedule_crontab_filename(schedule_id)
+            for schedule_id in Schedule.objects.order_by("id").values_list("id", flat=True)
         ]
         existing_files = {path.name for path in directory.iterdir() if path.is_file()} if directory.exists() else set()
         missing_files = [filename for filename in expected_files if filename not in existing_files]
@@ -75,6 +77,20 @@ def cron_files_health() -> dict:
             "missing_files": [],
             "error": str(exc),
         }
+
+
+def recreate_missing_cron_files() -> list[str]:
+    """Recreate absent schedule cron files without touching existing definitions."""
+    directory = settings.CRONTAB_PATH
+    directory.mkdir(parents=True, exist_ok=True)
+    recreated_files = []
+    for schedule in Schedule.objects.order_by("id"):
+        filename = schedule_crontab_filename(schedule.id)
+        if (directory / filename).is_file():
+            continue
+        write_crontab(schedule)
+        recreated_files.append(filename)
+    return recreated_files
 
 
 def get_system_health() -> dict:

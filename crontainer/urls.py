@@ -16,6 +16,7 @@ from apps.core.api import (
     health,
     login_view,
     logout_view,
+    recreate_cron_files,
 )
 from apps.node.api import NodeViewSet
 
@@ -28,6 +29,7 @@ router.register("nodes", NodeViewSet)
 
 urlpatterns = [
     path("api/health/", health, name="health"),
+    path("api/health/cron-files/recreate/", recreate_cron_files, name="recreate-cron-files"),
     path("api/dashboard/summary/", dashboard_summary, name="dashboard-summary"),
     path("api/auth/csrf/", csrf, name="csrf"),
     path("api/auth/login/", login_view, name="api-login"),

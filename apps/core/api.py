@@ -5,15 +5,16 @@ import os
 from cronsim import CronSimError
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.db import DatabaseError
 from django.db.models import Count, Prefetch, Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
-from rest_framework import permissions, serializers, viewsets
+from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
-from apps.core.cron import parse_cron_rule
-from apps.core.health import get_system_health
+from apps.core.cron import parse_cron_rule, write_crontab
+from apps.core.health import get_system_health, recreate_missing_cron_files
 from apps.core.models import Credential, Job, Schedule
 from apps.node.models import Node
 
@@ -26,12 +27,6 @@ def validate_cron_rule(value: str) -> str:
     except CronSimError as exc:
         raise serializers.ValidationError(f"Invalid cron expression: {exc}") from exc
     return value
-
-
-def write_crontab(schedule: Schedule) -> None:
-    command = settings.CRONJOB_CMD.format(schedule_id=schedule.id, cron_rule=schedule.cron_rule)
-    settings.CRONTAB_PATH.mkdir(parents=True, exist_ok=True)
-    (settings.CRONTAB_PATH / f"ct_{schedule.id}").write_text(f"{command}\n", encoding="utf-8")
 
 
 class CredentialSerializer(serializers.ModelSerializer):
@@ -220,6 +215,24 @@ def csrf(request):
 @permission_classes([permissions.AllowAny])
 def health(request):
     return Response(get_system_health())
+
+
+@api_view(["POST"])
+def recreate_cron_files(request):
+    try:
+        recreated_files = recreate_missing_cron_files()
+    except (DatabaseError, OSError):
+        return Response(
+            {"detail": "Unable to recreate missing schedule files."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    return Response(
+        {
+            "recreated_count": len(recreated_files),
+            "recreated_files": recreated_files,
+            "health": get_system_health(),
+        }
+    )
 
 
 @api_view(["GET"])

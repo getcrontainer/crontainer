@@ -258,9 +258,16 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .health-check-unhealthy .health-check-state i { background: #dc6248; }
 .health-missing-files { display: grid; max-height: 128px; gap: 5px; overflow-y: auto; margin-top: 6px; padding-right: 3px; }
 .health-missing-files code { display: block; border-radius: 7px; padding: 5px 7px; color: #913d2b; background: #fff0ec; font-family: "SFMono-Regular", Consolas, monospace; font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
+.health-check-action { display: grid; justify-items: start; gap: 6px; margin-top: 5px; }
+.health-repair-button { display: inline-flex; min-height: 31px; align-items: center; gap: 7px; border: 1px solid #e2a99c; border-radius: 8px; padding: 6px 9px; color: #8f3e2c; background: #fff8f6; font-size: 11px; font-weight: 660; line-height: 1.25; transition: border-color .16s ease, color .16s ease, background .16s ease, box-shadow .16s ease; }
+.health-repair-button:hover:not(:disabled), .health-repair-button:focus-visible { border-color: #cf806d; color: #74301f; background: #fff0ec; outline: none; box-shadow: 0 0 0 3px rgb(207 128 109 / 14%); }
+.health-repair-button-success, .health-repair-button-success:hover:not(:disabled), .health-repair-button-success:focus-visible { cursor: default; border-color: #a8d6bf; color: #226c4b; background: #edf8f2; box-shadow: none; }
+.health-repair-button .is-spinning { animation: health-spin .9s linear infinite; }
+.health-check-copy .health-repair-error { color: #913d2b; font-size: 10px; font-weight: 560; line-height: 1.45; }
 .system-health-popover footer { display: flex; align-items: center; gap: 8px; border-top: 1px solid #e7e7e9; padding: 12px 18px 13px; color: #737378; font-size: 10px; font-weight: 550; line-height: 1.4; }
 .system-health-popover footer .status-dot { width: 6px; height: 6px; background: #89898e; box-shadow: none; }
 @keyframes health-pulse { 50% { opacity: .55; transform: scale(.78); } }
+@keyframes health-spin { to { transform: rotate(1turn); } }
 .user-trigger { display: flex; height: 42px; align-items: center; gap: 9px; border: 0; border-radius: 12px; padding: 4px 7px 4px 4px; color: #5f5f64; background: transparent; font-size: 12px; font-weight: 650; transition: background .18s ease; }
 .user-trigger:hover { background: #ececea; }
 .user-avatar { display: inline-flex; width: 34px; height: 34px; align-items: center; justify-content: center; border-radius: 10px; color: #fff; background: linear-gradient(145deg, #313236, #151517); font-size: 11px; font-weight: 760; letter-spacing: .03em; box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%); }

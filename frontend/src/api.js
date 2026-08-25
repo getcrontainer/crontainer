@@ -30,6 +30,7 @@ export const api = {
   dashboardSummary: () => request("/api/dashboard/summary/"),
   describeCron: (cronRule) => request(`/api/describe-cron/?cron_rule=${encodeURIComponent(cronRule)}`),
   health: () => request("/api/health/"),
+  recreateMissingCronFiles: () => request("/api/health/cron-files/recreate/", { method: "POST" }),
   login: (credentials) => request("/api/auth/login/", { method: "POST", body: JSON.stringify(credentials) }),
   logout: () => request("/api/auth/logout/", { method: "POST" }),
   list: (resource, page) => request(page || `/api/${resource}/`),
