@@ -5,21 +5,15 @@ set -e
 echo "Running pre push hook!"
 repository_path=$(git rev-parse --show-toplevel)
 
-echo "Running black.."
-black "$repository_path"/apps
+echo "Running Ruff lint checks.."
+uv run ruff check "$repository_path"
 
-echo "Running isort.."
-isort "$repository_path"/apps
-
-echo "Running djlint"
-djlint --check "$repository_path"/apps
-
-echo "Running pylint"
-pylint .
+echo "Checking Ruff formatting.."
+uv run ruff format --check "$repository_path"
 
 echo "Running tests"
 export DJANGO_TEST=1
 rm -rf "/tmp/cron.d/"
 mkdir -p "/tmp/cron.d/"
-python3 "$repository_path"/manage.py test "$repository_path"/apps
+uv run python "$repository_path"/manage.py test "$repository_path"/apps
 exit 0

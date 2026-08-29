@@ -1,26 +1,34 @@
-[tool.black]
-line-length = 120
-exclude = '''
-/(
-  | migrations
-)/
-'''
-
-[tool.isort]
-profile = "black"
-skip = "migrations"
-filter_files = true
-
-[tool.pylint]
-ignore = ["migrations", "manage.py", ".venv", "venv", ".env", "env"]
-disable = [
-    "no-member", # Some members are created in runtime, pylint fails to detect such cases
-    "line-too-long", # We already have this in black.
-    "broad-exception-caught",
-    "missing-class-docstring",
-    "missing-function-docstring",
-    "missing-module-docstring",
-    "too-many-ancestors", # django can't cope well with this one
-    "too-few-public-methods", # django can't cope well with this one
-    "fixme"
+[project]
+name = "crontainer"
+version = "0.1.0"
+description = "Schedule and manage Docker containers with cron."
+requires-python = ">=3.12"
+dependencies = [
+    "Django==5.2.17",
+    "cronsim==2.7",
+    "django-environ==0.11.2",
+    "django-filter==26.1",
+    "djangorestframework==3.15.2",
+    "docker==7.1.0",
+    "gunicorn==23.0.0",
+    "PyYAML==6.0.2",
+    "python-dateutil==2.9.0.post0",
+    "whitenoise==6.12.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff==0.16.4",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "DJ", "PL", "UP"]
+ignore = ["DJ008", "DJ012", "PLR2004"]
+
+[tool.ruff.lint.per-file-ignores]
+"manage.py" = ["PLC0415"]

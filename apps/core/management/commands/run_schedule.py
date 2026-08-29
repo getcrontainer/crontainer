@@ -67,9 +67,7 @@ class Command(BaseCommand):
         start_time = time.time()
         self.stdout.write(self.style.WARNING(f"[{self.schedule.id}] building image {self.schedule.image}"))
         try:
-            _image, build_log = client.images.build(
-                path=self.schedule.image, tag=f"{self.schedule.id}:latest"
-            )
+            _image, build_log = client.images.build(path=self.schedule.image, tag=f"{self.schedule.id}:latest")
             for step in build_log:
                 assert step
             self.local_image = f"{self.schedule.id}:latest"

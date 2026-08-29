@@ -20,8 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DEBUG=(bool, False),
     ALLOWED_HOSTS=(list, ["*"]),
-    CRONJOB_CMD=(str, "{cron_rule}\troot\tcd /app && python3 /app/manage.py run_schedule {schedule_id}"),
+    CRONJOB_CMD=(str, "{cron_rule}\troot\tcd /app && /app/.venv/bin/python /app/manage.py run_schedule {schedule_id}"),
     CRONTAB_PATH=(str, "/tmp/cron.d"),
+    CRON_PID_FILE=(str, "/run/crond.pid"),
+    JOB_UPDATER_PID_FILE=(str, "/run/crontainer-update-history.pid"),
+    HEALTH_DISK_PATH=(str, str(BASE_DIR / "data")),
+    HEALTH_DISK_MAX_USED_PERCENT=(float, 80.0),
     CSRF_TRUSTED_ORIGINS=(list, []),
     SESSION_KEY=(str, "django-insecure-t(=_djgy021(tvq%doh+u(v*#lz0zx8lc6i93!u5hfo$ce!z2b"),
 )
@@ -35,7 +39,6 @@ CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 # Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -43,7 +46,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "apps.core",
     "apps.node",
-    "widget_tweaks",
+    "django_filters",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
@@ -59,14 +63,15 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "crontainer.urls"
 
+FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [FRONTEND_DIST],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
-                "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
@@ -116,33 +121,35 @@ USE_I18N = True
 
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-STATIC_URL = "static/"
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Added
+# Vue frontend and static assets
 
+STATIC_URL = "/assets/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
-STATICFILES_DIRS = [BASE_DIR / "apps/static"]
+STATICFILES_DIRS = [FRONTEND_DIST / "assets"] if (FRONTEND_DIST / "assets").exists() else []
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+WHITENOISE_MAX_AGE = 31_536_000
 
 # Crontab settings
 
 CRONTAB_PATH = Path(env("CRONTAB_PATH"))
 CRONJOB_CMD = env("CRONJOB_CMD")
+CRON_PID_FILE = Path(env("CRON_PID_FILE"))
+JOB_UPDATER_PID_FILE = Path(env("JOB_UPDATER_PID_FILE"))
+HEALTH_DISK_PATH = Path(env("HEALTH_DISK_PATH"))
+HEALTH_DISK_MAX_USED_PERCENT = env("HEALTH_DISK_MAX_USED_PERCENT")
 
-# Debug toolbar settings
-if DEBUG:
-    INSTALLED_APPS += ["debug_toolbar"]
-    # Middleware should be placed right after anything that encodes the response's content
-    # (in this case, WhiteNoise)
-    MIDDLEWARE.insert(2, "debug_toolbar.middleware.DebugToolbarMiddleware")
-    INTERNAL_IPS = [
-        "127.0.0.1",
-    ]
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "PAGE_SIZE": 50,
+}
