@@ -23,26 +23,44 @@ export const useAppStore = defineStore("app", () => {
   const currentUser = ref(null);
   const loading = ref(true);
   const error = ref("");
-  const notice = ref("");
+  const notice = ref(null);
   const saveError = ref(null);
   const collections = reactive(Object.fromEntries(resourceNames.map((resource) => [resource, []])));
   const pagination = reactive(Object.fromEntries(resourceNames.map((resource) => [resource, emptyPagination()])));
   const dashboardSummary = reactive(emptySummary());
   const jobFilterOptions = reactive({ statuses: [], schedules: [] });
 
-  function message(text) {
-    notice.value = text;
+  function message(action, resource, item = {}) {
+    const singular = resource.slice(0, -1);
+    const resourceLabel = singular.charAt(0).toUpperCase() + singular.slice(1);
+    const itemLabel = item.name || item.username;
+    const subject = itemLabel ? `“${itemLabel}”` : `The ${singular}`;
+    const copy = {
+      create: {
+        title: `${resourceLabel} created`,
+        detail: resource === "schedules" ? `${subject} is ready to run.` : `${subject} is ready to use.`,
+      },
+      edit: {
+        title: `${resourceLabel} updated`,
+        detail: itemLabel ? `Changes to ${subject} were saved.` : "Your changes were saved successfully.",
+      },
+      delete: {
+        title: `${resourceLabel} deleted`,
+        detail: `${subject} was removed successfully.`,
+      },
+    }[action];
+    notice.value = { action, ...copy };
     error.value = "";
   }
 
   function failure(err) {
     error.value = err.message;
-    notice.value = "";
+    notice.value = null;
   }
 
   function clearMessages() {
     error.value = "";
-    notice.value = "";
+    notice.value = null;
     saveError.value = null;
   }
 
@@ -141,7 +159,7 @@ export const useAppStore = defineStore("app", () => {
     try {
       await api.save(resource, payload, id);
       await Promise.all([load(resource), loadDashboardSummary()]);
-      message(`${resource.slice(0, -1)} saved.`);
+      message(id == null ? "create" : "edit", resource, payload);
       return true;
     } catch (err) {
       saveError.value = err;
@@ -154,7 +172,7 @@ export const useAppStore = defineStore("app", () => {
     try {
       await api.remove(resource, item.id);
       await Promise.all([load(resource), loadDashboardSummary()]);
-      message("Deleted.");
+      message("delete", resource, item);
       return true;
     } catch (err) {
       failure(err);

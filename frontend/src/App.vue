@@ -103,11 +103,13 @@ let cronDescriptionTimer;
 let cronDescriptionRequest = 0;
 let healthPollTimer;
 let healthRequestId = 0;
+let preserveNoticeOnNextNavigation = false;
 
 const activeSchedules = computed(() => dashboardSummary.value.schedules.active);
 const healthyJobs = computed(() => dashboardSummary.value.jobs.healthy);
 const sshNodes = computed(() => dashboardSummary.value.nodes.ssh);
 const adminUsers = computed(() => dashboardSummary.value.users.administrators);
+const noticeIcon = computed(() => ({ create: Plus, edit: Pencil, delete: Trash2 }[notice.value?.action] || Check));
 const systemHealthState = computed(() => {
   if (healthError.value) return "unavailable";
   if (!systemHealth.value) return healthRefreshing.value ? "checking" : "unavailable";
@@ -336,8 +338,9 @@ function resetForm(resource) {
   if (resource === "users") replace(userForm, emptyUser());
   if (resource === "nodes") replace(nodeForm, emptyNode());
 }
-function closeForm(resource) {
+function closeForm(resource, { preserveNotice = false } = {}) {
   resetForm(resource);
+  preserveNoticeOnNextNavigation = preserveNotice;
   router.push({ name: listRouteNames[resource] });
 }
 function isList(resource) {
@@ -389,7 +392,7 @@ async function loadMore(resource) {
     await appStore.loadMore(resource);
   } catch (err) {
     error.value = err.message || `Unable to load more ${resource}.`;
-    notice.value = "";
+    notice.value = null;
   }
 }
 
@@ -461,7 +464,7 @@ function syncRouteForm() {
   const item = collections.value[resource].find((candidate) => String(candidate.id) === String(route.params.id));
   if (!item) {
     error.value = `${resource.slice(0, -1)} not found.`;
-    notice.value = "";
+    notice.value = null;
     router.replace({ name: listRouteNames[resource] });
     return;
   }
@@ -483,7 +486,7 @@ async function saveSchedule() {
   clearFormErrors("schedules");
   const env_vars = Object.fromEntries(envRows.value.filter((row) => row.key).map((row) => [row.key, row.value]));
   if (await appStore.saveResource("schedules", { ...scheduleForm, env_vars }, editing.schedules?.id)) {
-    closeForm("schedules");
+    closeForm("schedules", { preserveNotice: true });
   } else {
     applyFormErrors("schedules", saveError.value);
   }
@@ -492,7 +495,7 @@ async function save(resource, form) {
   clearFormErrors(resource);
   const payload = { ...form };
   if (editing[resource] && !payload.password) delete payload.password;
-  if (await appStore.saveResource(resource, payload, editing[resource]?.id)) closeForm(resource);
+  if (await appStore.saveResource(resource, payload, editing[resource]?.id)) closeForm(resource, { preserveNotice: true });
   else applyFormErrors(resource, saveError.value);
 }
 function itemLabel(item) {
@@ -557,7 +560,7 @@ async function refreshJobs() {
     ]);
   } catch (err) {
     error.value = err.message || "Unable to refresh jobs.";
-    notice.value = "";
+    notice.value = null;
   }
 }
 
@@ -569,7 +572,7 @@ async function applyJobFilters() {
     error.value = "";
   } catch (err) {
     error.value = err.message || "Unable to filter jobs.";
-    notice.value = "";
+    notice.value = null;
   } finally {
     jobsFiltering.value = false;
   }
@@ -643,6 +646,12 @@ function startSystemHealthPolling() {
 }
 
 watch(() => route.fullPath, (_currentPath, previousPath) => {
+  if (notice.value) {
+    if (preserveNoticeOnNextNavigation) preserveNoticeOnNextNavigation = false;
+    else notice.value = null;
+  } else {
+    preserveNoticeOnNextNavigation = false;
+  }
   mobileSidebarOpen.value = false;
   userMenuOpen.value = false;
   searchQuery.value = "";
@@ -796,7 +805,20 @@ onBeforeUnmount(() => {
       </aside>
 
       <main class="app-content"><div class="app-surface">
-        <p v-if="notice" class="alert alert-success"><Check :size="18" aria-hidden="true" />{{ notice }}</p><p v-if="error && route.meta.mode !== 'form'" class="alert alert-error">{{ error }}</p>
+        <div class="toast-region">
+          <Transition name="toast">
+            <div v-if="notice" class="alert" :class="`alert-${notice.action}`" role="status" aria-live="polite" aria-atomic="true">
+              <span class="alert-icon"><component :is="noticeIcon" :size="18" aria-hidden="true" /></span>
+              <span class="alert-copy"><strong>{{ notice.title }}</strong><span>{{ notice.detail }}</span></span>
+            </div>
+          </Transition>
+          <Transition name="toast">
+            <div v-if="error && route.meta.mode !== 'form'" class="alert alert-error" role="alert" aria-atomic="true">
+              <span class="alert-icon"><X :size="18" aria-hidden="true" /></span>
+              <span class="alert-copy"><strong>Something went wrong</strong><span>{{ error }}</span></span>
+            </div>
+          </Transition>
+        </div>
 
         <section v-if="isList('schedules')" class="resource-section">
           <header class="page-heading"><div><p class="eyebrow">Automation</p><h1>Schedules</h1><p>Every recurring workload, precisely timed and quietly under control.</p></div><RouterLink :to="{ name: 'schedule-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New schedule</RouterLink></header>
