@@ -1,17 +1,9 @@
 """JSON API for Docker node configuration."""
 
-from rest_framework import serializers, viewsets
+from rest_framework import viewsets
 
 from apps.node.models import Node
-
-
-class NodeSerializer(serializers.ModelSerializer):
-    secret = serializers.CharField(write_only=True, required=False)
-
-    class Meta:
-        model = Node
-        fields = ["id", "name", "secret", "unix_socket"]
-        read_only_fields = ["id"]
+from apps.node.serializers import NodeSerializer
 
 
 class NodeViewSet(viewsets.ModelViewSet):
