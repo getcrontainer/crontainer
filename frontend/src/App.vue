@@ -59,6 +59,7 @@ const healthCheckDefinitions = [
   ["disk", "Disk capacity", HardDrive],
 ];
 const HEALTH_POLL_INTERVAL_MS = 30_000;
+const DEFAULT_NODE_UNIX_SOCKET = "/var/run/docker.sock";
 
 const route = useRoute();
 const router = useRouter();
@@ -107,7 +108,6 @@ let preserveNoticeOnNextNavigation = false;
 
 const activeSchedules = computed(() => dashboardSummary.value.schedules.active);
 const healthyJobs = computed(() => dashboardSummary.value.jobs.healthy);
-const sshNodes = computed(() => dashboardSummary.value.nodes.ssh);
 const adminUsers = computed(() => dashboardSummary.value.users.administrators);
 const noticeIcon = computed(() => ({ create: Plus, edit: Pencil, delete: Trash2 }[notice.value?.action] || Check));
 const systemHealthState = computed(() => {
@@ -287,11 +287,12 @@ function parseTerminalLog(log) {
 }
 
 function emptySchedule() {
-  return { name: "", image: "", cmd: "", parameters: "", cron_rule: "0 0 * * *", active: true, singleton: false, credential: null, cpu: null, memory: null };
+  const defaultNode = collections.value.nodes.find((node) => node.unix_socket === DEFAULT_NODE_UNIX_SOCKET);
+  return { name: "", image: "", cmd: "", parameters: "", cron_rule: "0 0 * * *", active: true, singleton: false, credential: null, node: defaultNode?.id ?? null, cpu: null, memory: null };
 }
 function emptyCredential() { return { name: "", username: "", password: "", category: 1 }; }
 function emptyUser() { return { username: "", email: "", first_name: "", last_name: "", password: "" }; }
-function emptyNode() { return { name: "", host: "", port: 2375, use_ssh: false, secret: "" }; }
+function emptyNode() { return { name: "", secret: "", unix_socket: "" }; }
 function replace(target, source) { Object.assign(target, source); }
 function validationMessages(value) {
   if (Array.isArray(value)) return value.flatMap(validationMessages);
@@ -910,6 +911,15 @@ onBeforeUnmount(() => {
               <p v-if="fieldError('schedules', 'image')" id="schedule-image-error" class="form-field-error">{{ fieldError('schedules', 'image') }}</p>
             </div>
             <div>
+              <label class="form-label">Node</label>
+              <select v-model="scheduleForm.node" class="form-control" :class="{ 'form-control-error': fieldError('schedules', 'node') }" :aria-invalid="Boolean(fieldError('schedules', 'node'))" required @change="clearFieldError('schedules', 'node')">
+                <option :value="null" disabled>Select a node</option>
+                <option v-for="node in collections.nodes" :key="node.id" :value="node.id">{{ node.name }}</option>
+              </select>
+              <button v-if="pagination.nodes.next" type="button" class="form-load-more" :disabled="pagination.nodes.loadingMore" @click="loadMore('nodes')">{{ pagination.nodes.loadingMore ? 'Loading…' : `Load ${nextPageSize('nodes')} more nodes` }}</button>
+              <p v-if="fieldError('schedules', 'node')" class="form-field-error">{{ fieldError('schedules', 'node') }}</p>
+            </div>
+            <div>
               <label class="form-label">Credentials</label>
               <select v-model="scheduleForm.credential" class="form-control" :class="{ 'form-control-error': fieldError('schedules', 'credential') }" :aria-invalid="Boolean(fieldError('schedules', 'credential'))" @change="clearFieldError('schedules', 'credential')">
                 <option :value="null">---------</option>
@@ -1056,10 +1066,10 @@ onBeforeUnmount(() => {
 
         <section v-if="isList('nodes')" class="resource-section">
           <header class="page-heading"><div><p class="eyebrow">Infrastructure</p><h1>Nodes</h1><p>The runtime destinations where your scheduled work comes alive.</p></div><RouterLink :to="{ name: 'node-new' }" class="page-primary"><Plus :size="18" aria-hidden="true" />New node</RouterLink></header>
-          <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Monitor :size="20" aria-hidden="true" /></div><div><span>Runtime nodes</span><strong>{{ dashboardSummary.nodes.total }}</strong><small>configured endpoints</small></div></article><article class="metric-card"><div class="metric-icon"><LockKeyhole :size="20" aria-hidden="true" /></div><div><span>SSH secured</span><strong>{{ sshNodes }}</strong><small>encrypted connections</small></div></article></div>
+          <div class="metric-grid metric-grid-compact"><article class="metric-card metric-featured"><div class="metric-icon"><Monitor :size="20" aria-hidden="true" /></div><div><span>Runtime nodes</span><strong>{{ dashboardSummary.nodes.total }}</strong><small>configured endpoints</small></div></article></div>
           <div class="data-panel not-format relative overflow-x-auto">
             <div class="panel-heading"><div><h2>Connected infrastructure</h2><span>{{ collectionStatus('nodes', 'target') }}</span></div></div>
-            <table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all nodes" /></th><th class="px-6 py-3">Name</th><th class="px-6 py-3">Host</th><th class="px-6 py-3">Port</th><th class="px-6 py-3">Connection</th><th class="px-6 py-3">Secret</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="node in visibleCollections.nodes" :key="node.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select node ${node.name}`" /></td><td class="px-6 py-4 whitespace-nowrap"><div class="table-primary">{{ node.name }}</div></td><td class="px-6 py-4"><code class="host-code">{{ node.host }}</code></td><td class="px-6 py-4">{{ node.port }}</td><td class="px-6 py-4"><span class="provider-chip"><LockKeyhole v-if="node.use_ssh" :size="14" aria-hidden="true" /><Monitor v-else :size="14" aria-hidden="true" />{{ node.use_ssh ? 'SSH' : 'Direct' }}</span></td><td class="px-6 py-4"><span class="secret-value">••••••••</span></td><td class="px-6 py-4"><button class="btn-mini-remove" aria-label="Delete node" @click="requestDelete('nodes', node)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'node-edit', params: { id: node.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit node"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table>
+            <table class="resource-table w-full text-sm text-left"><thead><tr><th class="px-6 py-3 w-10"><input type="checkbox" aria-label="Select all nodes" /></th><th class="px-6 py-3">Name</th><th class="px-6 py-3">Unix socket</th><th class="px-6 py-3">Secret</th><th class="px-6 py-3 w-36">Action</th></tr></thead><tbody><tr v-for="node in visibleCollections.nodes" :key="node.id" class="default-table-row"><td class="px-6 py-4 rounded-s-xl"><input type="checkbox" :aria-label="`Select node ${node.name}`" /></td><td class="px-6 py-4 whitespace-nowrap"><div class="table-primary">{{ node.name }}</div></td><td class="px-6 py-4"><code v-if="node.unix_socket" class="host-code">{{ node.unix_socket }}</code><span v-else>—</span></td><td class="px-6 py-4"><span class="secret-value">••••••••</span></td><td class="px-6 py-4"><button class="btn-mini-remove" aria-label="Delete node" @click="requestDelete('nodes', node)"><Trash2 :size="18" aria-hidden="true" /></button> <RouterLink :to="{ name: 'node-edit', params: { id: node.id } }" class="btn-mini-edit inline-flex items-center justify-center" aria-label="Edit node"><Pencil :size="18" aria-hidden="true" /></RouterLink></td></tr></tbody></table>
             <div v-if="pagination.nodes.next" class="load-more-bar"><button type="button" class="load-more-button" :disabled="pagination.nodes.loadingMore" @click="loadMore('nodes')">{{ pagination.nodes.loadingMore ? 'Loading…' : `Load ${nextPageSize('nodes')} more` }}</button><span>{{ collections.nodes.length }} of {{ pagination.nodes.count }} loaded</span></div>
           </div>
           <RouterLink :to="{ name: 'node-new' }" class="mobile-fab" aria-label="Add node"><Plus :size="25" aria-hidden="true" /></RouterLink>
@@ -1075,20 +1085,10 @@ onBeforeUnmount(() => {
               <input v-model="nodeForm.name" class="form-control" :class="{ 'form-control-error': fieldError('nodes', 'name') }" :aria-invalid="Boolean(fieldError('nodes', 'name'))" required @input="clearFieldError('nodes', 'name')" />
               <p v-if="fieldError('nodes', 'name')" class="form-field-error">{{ fieldError('nodes', 'name') }}</p>
             </div>
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_6rem_7rem]">
-              <div>
-                <label class="form-label">Host</label>
-                <input v-model="nodeForm.host" class="form-control" :class="{ 'form-control-error': fieldError('nodes', 'host') }" :aria-invalid="Boolean(fieldError('nodes', 'host'))" required @input="clearFieldError('nodes', 'host')" />
-                <p v-if="fieldError('nodes', 'host')" class="form-field-error">{{ fieldError('nodes', 'host') }}</p>
-              </div>
-              <div>
-                <label class="form-label">Port</label>
-                <input v-model.number="nodeForm.port" class="form-control" :class="{ 'form-control-error': fieldError('nodes', 'port') }" :aria-invalid="Boolean(fieldError('nodes', 'port'))" type="number" required @input="clearFieldError('nodes', 'port')" />
-                <p v-if="fieldError('nodes', 'port')" class="form-field-error">{{ fieldError('nodes', 'port') }}</p>
-              </div>
-              <div class="flex items-end pb-1">
-                <div><label class="form-check"><input v-model="nodeForm.use_ssh" type="checkbox" class="rounded" @change="clearFieldError('nodes', 'use_ssh')" /><span>Use SSH</span></label><p v-if="fieldError('nodes', 'use_ssh')" class="form-field-error">{{ fieldError('nodes', 'use_ssh') }}</p></div>
-              </div>
+            <div>
+              <label class="form-label">Unix socket</label>
+              <input v-model="nodeForm.unix_socket" class="form-control" :class="{ 'form-control-error': fieldError('nodes', 'unix_socket') }" :aria-invalid="Boolean(fieldError('nodes', 'unix_socket'))" placeholder="/var/run/docker.sock" @input="clearFieldError('nodes', 'unix_socket')" />
+              <p v-if="fieldError('nodes', 'unix_socket')" class="form-field-error">{{ fieldError('nodes', 'unix_socket') }}</p>
             </div>
             <div>
               <label class="form-label">Secret</label>

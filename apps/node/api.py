@@ -10,7 +10,7 @@ class NodeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Node
-        fields = ["id", "name", "host", "port", "use_ssh", "secret"]
+        fields = ["id", "name", "secret", "unix_socket"]
         read_only_fields = ["id"]
 
 

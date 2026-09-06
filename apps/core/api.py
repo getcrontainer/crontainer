@@ -21,6 +21,11 @@ from apps.core.models import Credential, Job, Schedule
 from apps.node.models import Node
 
 User = get_user_model()
+DEFAULT_NODE_UNIX_SOCKET = "/var/run/docker.sock"
+
+
+def get_default_node():
+    return Node.objects.get(unix_socket=DEFAULT_NODE_UNIX_SOCKET)
 
 
 def validate_cron_rule(value: str) -> str:
@@ -54,6 +59,11 @@ class ScheduleSerializer(serializers.ModelSerializer):
     cron_description = serializers.CharField(read_only=True)
     source_name = serializers.CharField(read_only=True)
     credential_name = serializers.CharField(source="credential.name", read_only=True)
+    node = serializers.PrimaryKeyRelatedField(
+        queryset=Node.objects.all(),
+        allow_null=False,
+        default=get_default_node,
+    )
     cron_rule = serializers.CharField(validators=[validate_cron_rule])
     success_rate = serializers.SerializerMethodField()
 
@@ -77,6 +87,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
             "source_name",
             "credential",
             "credential_name",
+            "node",
             "cpu",
             "memory",
         ]

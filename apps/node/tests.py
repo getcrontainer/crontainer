@@ -16,20 +16,21 @@ class TestNodeApi(TestCase):
             "/api/nodes/",
             data={
                 "name": "worker-1",
-                "host": "docker.internal",
-                "port": 2375,
-                "use_ssh": False,
                 "secret": "top-secret",
+                "unix_socket": "/var/run/docker.sock",
             },
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 201)
         node_id = response.json()["id"]
-        self.assertNotIn("secret", response.json())
+        self.assertEqual(set(response.json()), {"id", "name", "unix_socket"})
+        self.assertEqual(response.json()["unix_socket"], "/var/run/docker.sock")
 
         response = self.client.get("/api/nodes/")
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(response.json()["results"][0]), {"id", "name", "unix_socket"})
         self.assertEqual(response.json()["results"][0]["name"], "worker-1")
+        self.assertEqual(response.json()["results"][0]["unix_socket"], "/var/run/docker.sock")
 
         response = self.client.delete(f"/api/nodes/{node_id}/")
         self.assertEqual(response.status_code, 204)

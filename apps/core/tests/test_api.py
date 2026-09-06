@@ -22,29 +22,72 @@ class ApiTestCase(TestCase):
 
 
 class TestScheduleApi(ApiTestCase):
-    def test_create_list_update_and_delete_schedule(self):
+    def test_schedule_defaults_to_the_local_node_and_rejects_null(self):
+        node = Node.objects.create(
+            name="local",
+            host="localhost",
+            unix_socket="/var/run/docker.sock",
+        )
         response = self.client.post(
             "/api/schedules/",
-            data={"name": "nightly", "image": "alpine:latest", "cron_rule": "0 0 * * *", "env_vars": {"MODE": "night"}},
+            data={"name": "nightly", "image": "alpine:latest", "cron_rule": "0 0 * * *"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["node"], str(node.id))
+
+        response = self.client.patch(
+            f"/api/schedules/{response.json()['id']}/",
+            data={"node": None},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["node"], ["This field may not be null."])
+
+    def test_create_list_update_and_delete_schedule(self):
+        primary_node = Node.objects.create(
+            name="primary",
+            host="primary.internal",
+            unix_socket="/var/run/docker-primary.sock",
+        )
+        fallback_node = Node.objects.create(
+            name="fallback",
+            host="fallback.internal",
+            unix_socket="/var/run/docker-fallback.sock",
+        )
+        response = self.client.post(
+            "/api/schedules/",
+            data={
+                "name": "nightly",
+                "image": "alpine:latest",
+                "cron_rule": "0 0 * * *",
+                "env_vars": {"MODE": "night"},
+                "node": str(primary_node.id),
+            },
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 201)
         schedule_id = response.json()["id"]
         self.assertEqual(response.json()["created_by"], "testuser")
         self.assertEqual(response.json()["success_rate"], 0.0)
+        self.assertEqual(response.json()["node"], str(primary_node.id))
         self.assertTrue((settings.CRONTAB_PATH / f"ct_{schedule_id}").exists())
 
         response = self.client.get("/api/schedules/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["results"][0]["name"], "nightly")
+        self.assertEqual(response.json()["results"][0]["node"], str(primary_node.id))
 
         response = self.client.patch(
             f"/api/schedules/{schedule_id}/",
-            data={"active": False},
+            data={"active": False, "node": str(fallback_node.id)},
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["active"])
+        self.assertEqual(response.json()["node"], str(fallback_node.id))
 
         response = self.client.delete(f"/api/schedules/{schedule_id}/")
         self.assertEqual(response.status_code, 204)
@@ -52,6 +95,7 @@ class TestScheduleApi(ApiTestCase):
         self.assertFalse((settings.CRONTAB_PATH / f"ct_{schedule_id}").exists())
 
     def test_invalid_cron_rule_is_rejected(self):
+        Node.objects.create(name="local", host="localhost", unix_socket="/var/run/docker.sock")
         for cron_rule in ["invalid", "/5 0 * * *"]:
             with self.subTest(cron_rule=cron_rule):
                 response = self.client.post(
@@ -220,8 +264,14 @@ class TestPagination(ApiTestCase):
         Job.objects.create(schedule=active_schedule, status="exited", status_code=0)
         Job.objects.create(schedule=active_schedule, status="failure", status_code=1)
         Credential.objects.bulk_create(Credential(name=f"registry-{index}", password="secret") for index in range(51))
-        Node.objects.create(name="ssh", host="ssh.internal", port=22, use_ssh=True)
-        Node.objects.create(name="direct", host="docker.internal", port=2375, use_ssh=False)
+        Node.objects.create(name="ssh", host="ssh.internal", port=22, use_ssh=True, unix_socket="/ssh.sock")
+        Node.objects.create(
+            name="direct",
+            host="docker.internal",
+            port=2375,
+            use_ssh=False,
+            unix_socket="/direct.sock",
+        )
         User.objects.create_superuser(username="admin", password="admin-password")
 
         response = self.client.get("/api/dashboard/summary/")
