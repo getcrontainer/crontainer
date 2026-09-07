@@ -47,6 +47,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
     cron_description = serializers.CharField(read_only=True)
     source_name = serializers.CharField(read_only=True)
     credential_name = serializers.CharField(source="credential.name", read_only=True)
+    node_name = serializers.CharField(source="node.name", read_only=True, allow_null=True)
     node = serializers.PrimaryKeyRelatedField(
         queryset=Node.objects.all(),
         allow_null=False,
@@ -76,6 +77,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
             "credential",
             "credential_name",
             "node",
+            "node_name",
             "cpu",
             "memory",
         ]

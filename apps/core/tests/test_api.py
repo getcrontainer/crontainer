@@ -36,6 +36,7 @@ class TestScheduleApi(ApiTestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["node"], str(node.id))
+        self.assertEqual(response.json()["node_name"], "local")
 
         response = self.client.patch(
             f"/api/schedules/{response.json()['id']}/",
@@ -73,12 +74,14 @@ class TestScheduleApi(ApiTestCase):
         self.assertEqual(response.json()["created_by"], "testuser")
         self.assertEqual(response.json()["success_rate"], 0.0)
         self.assertEqual(response.json()["node"], str(primary_node.id))
+        self.assertEqual(response.json()["node_name"], "primary")
         self.assertTrue((settings.CRONTAB_PATH / f"ct_{schedule_id}").exists())
 
         response = self.client.get("/api/schedules/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["results"][0]["name"], "nightly")
         self.assertEqual(response.json()["results"][0]["node"], str(primary_node.id))
+        self.assertEqual(response.json()["results"][0]["node_name"], "primary")
 
         response = self.client.patch(
             f"/api/schedules/{schedule_id}/",
@@ -88,6 +91,13 @@ class TestScheduleApi(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["active"])
         self.assertEqual(response.json()["node"], str(fallback_node.id))
+        self.assertEqual(response.json()["node_name"], "fallback")
+
+        fallback_node.delete()
+        response = self.client.get(f"/api/schedules/{schedule_id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["node"])
+        self.assertIsNone(response.json()["node_name"])
 
         response = self.client.delete(f"/api/schedules/{schedule_id}/")
         self.assertEqual(response.status_code, 204)

@@ -44,7 +44,7 @@ class JobFilter(filters.FilterSet):
 
 class ScheduleViewSet(viewsets.ModelViewSet):
     queryset = (
-        Schedule.objects.select_related("credential", "created_by")
+        Schedule.objects.select_related("credential", "created_by", "node")
         .prefetch_related(
             Prefetch(
                 "job_set",
